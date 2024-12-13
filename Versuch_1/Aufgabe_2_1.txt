@@ -1,0 +1,83 @@
+;********************************************************************
+;* htw saar - Fakultaet fuer Ingenieurwissenschaften                *
+;* Labor fuer Eingebettete Systeme                                  *
+;* Mikroprozessortechnik                                            *
+;********************************************************************
+;* Aufgabe-Nr.:         	*                                       *
+;* Name / Matrikel-Nr.: 	*                                       *
+;* Abgabedatum:         	*                                       *
+;********************************************************************
+
+;********************************************************************
+;* Daten-Bereich bzw. Daten-Speicher                                *
+;********************************************************************
+                AREA        Daten, DATA, READWRITE
+Datenanfang
+Input	 	EQU 	Datenanfang
+Output		EQU 	Input + 0x10
+
+
+
+	
+
+;********************************************************************
+;* Programm-Bereich bzw. Programm-Speicher                          *
+;********************************************************************
+                AREA        Programm, CODE, READONLY
+                ARM
+Reset_Handler   MSR         CPSR_c, #0x10    ; Activate User Mode
+
+;********************************************************************
+;* Main Program Start                                               *
+;********************************************************************
+                ENTRY
+                
+                LDR         R0, =Input ; Load the address of the input string into R0
+				
+                BL          AtouI             ; Call the AtouI subroutine
+                B           endlos            ; Infinite loop after conversion
+
+;********************************************************************
+;* Main Program End                                                 *
+;********************************************************************
+endlos          B           endlos
+
+;********************************************************************
+;* Subroutines                                                      *
+;********************************************************************
+
+AtouI           
+                PUSH        {R1-R4, LR}       ; Save registers and link register
+
+                MOV         R1, #0            ; Initialize result to 0
+                MOV         R2, #10           ; Prepare factor for multiplication by 10
+
+convert_loop
+                LDRB        R3, [R0], #1      ; Load current character and increment pointer
+                CMP         R3, #0            ; Check if the character is '\0'
+                BEQ         done              ; If '\0', end conversion
+
+                SUB         R3, R3, #'0'      ; Convert ASCII character to numeric value
+                CMP         R3, #9            ; Ensure it's a valid digit (0-9)
+                BHI         error             ; If invalid, jump to error handling
+					
+				MOV			R4,	R1
+                MUL         R1, R4, R2        ; Multiply current result by 10
+                ADD         R1, R1, R3        ; Add the numeric value to the result
+
+                B           convert_loop      ; Repeat for the next character
+
+done
+                MOV         R0, R1            ; Move the final result to R0
+                POP         {R1-R4, PC}       ; Restore registers and return
+
+error
+                MOV         R0, #0            ; If error, return 0
+                POP         {R1-R4, PC}       ; Restore registers and return
+
+                
+
+;********************************************************************
+;* End of Program Source                                            *
+;********************************************************************
+                END
