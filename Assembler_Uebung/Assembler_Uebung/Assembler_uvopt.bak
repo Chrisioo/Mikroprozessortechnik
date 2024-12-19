@@ -202,10 +202,10 @@
       <FileType>2</FileType>
       <tvExp>0</tvExp>
       <Focus>0</Focus>
-      <ColumnNumber>30</ColumnNumber>
+      <ColumnNumber>40</ColumnNumber>
       <tvExpOptDlg>0</tvExpOptDlg>
       <TopLine>134</TopLine>
-      <CurrentLine>167</CurrentLine>
+      <CurrentLine>147</CurrentLine>
       <bDave2>0</bDave2>
       <PathWithFileName>.\Assembler_Startup.s</PathWithFileName>
       <FilenameWithoutPath>Assembler_Startup.s</FilenameWithoutPath>
