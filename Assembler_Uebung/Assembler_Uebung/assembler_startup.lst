@@ -1,0 +1,463 @@
+
+
+
+ARM Macro Assembler    Page 1 
+
+
+    1 00000000         ;*******************************************************
+                       *************
+    2 00000000         ;* htw saar - Fakultaet fuer Ingenieurwissenschaften    
+                       *
+    3 00000000         ;* Labor fuer Eingebettete Systeme         *
+    4 00000000         ;* Mikroprozessortechnik           *
+    5 00000000         ;*******************************************************
+                       *************
+    6 00000000         ;* Assembler_Startup.S:            *
+    7 00000000         ;* Programmrumpf fuer Assembler-Programme mit dem Keil  
+                         *
+    8 00000000         ;* Entwicklungsprogramm uVision fuer ARM-Mikrocontroller
+                          *
+    9 00000000         ;*******************************************************
+                       *************
+   10 00000000         ;* Aufgabe-Nr.:          * 1                      *
+   11 00000000         ;*                 *             *
+   12 00000000         ;*******************************************************
+                       *************
+   13 00000000         ;* Gruppen-Nr.:    * 3. Gruppe Freitag      *
+   14 00000000         ;*                 *          *
+   15 00000000         ;*******************************************************
+                       *************
+   16 00000000         ;* Name / Matrikel-Nr.:  * Christian Petry / 3847497    
+                       *
+   17 00000000         ;*       * Xudong Zhang /      *
+   18 00000000         ;*       *          *
+   19 00000000         ;*******************************************************
+                       *************
+   20 00000000         ;* Abgabedatum:          * 20.12.2024                *
+   21 00000000         ;*       *          *
+   22 00000000         ;*******************************************************
+                       *************
+   23 00000000         
+   24 00000000         ;*******************************************************
+                       *************
+   25 00000000         ;* Daten-Bereich bzw. Daten-Speicher                 *
+   26 00000000         ;*******************************************************
+                       *************
+   27 00000000                 AREA             Daten, DATA, READWRITE
+   28 00000000         Datenanfang
+   29 00000000 36 35 35 
+              33 35 00 STR_1   DCB              "65535", 0x00
+   30 00000006 00000200 
+                       STR_2   EQU              Datenanfang + 0x200
+   31 00000006 00000300 
+                       Stack   EQU              Datenanfang + 0x300
+   32 00000006 00000400 
+                       TopStack
+                               EQU              Stack + 0x100
+   33 00000006 00000400 
+                       Datenende
+                               EQU              TopStack
+   34 00000006         
+   35 00000006         ;*******************************************************
+                       *************
+   36 00000006         ;* Programm-Bereich bzw. Programm-Speicher       *
+   37 00000006         ;*******************************************************
+                       *************
+
+
+
+ARM Macro Assembler    Page 2 
+
+
+   38 00000006                 AREA             Programm, CODE, READONLY
+   39 00000000                 ARM
+   40 00000000 E321F010 
+                       Reset_Handler
+                               MSR              CPSR_c, #0x10 ; User Mode aktiv
+                                                            ieren
+   41 00000004         
+   42 00000004         ;*******************************************************
+                       *************
+   43 00000004         ;* Hier das eigene (Haupt-)Programm einfuegen        *
+   44 00000004         ;*******************************************************
+                       *************
+   45 00000004         
+   46 00000004         main
+   47 00000004 E59FD108        LDR              SP, =TopStack
+   48 00000008 E59F0108        LDR              R0, =STR_1
+   49 0000000C EB000003        BL               AtouI
+   50 00000010 EB000015        BL               Berechnung
+   51 00000014 E59F1100        LDR              R1, =STR_2
+   52 00000018 EB000020        BL               uItoA
+   53 0000001C         
+   54 0000001C         ;*******************************************************
+                       *************
+   55 0000001C         ;* Ende des eigenen (Haupt-)Programms                   
+                                   *
+   56 0000001C         ;*******************************************************
+                       *************
+   57 0000001C EAFFFFFE 
+                       endlos  B                endlos
+   58 00000020         
+   59 00000020         ;*******************************************************
+                       *************
+   60 00000020         ;* ab hier Unterprogramme                               
+                                   *
+   61 00000020         ;*******************************************************
+                       *************
+   62 00000020         
+   63 00000020         ;*******************************************************
+                       *************
+   64 00000020         ;                                                       
+                                   *
+   65 00000020         ;       AtouI - Konvertiert ASCII-Zeichen in Integer    
+                                   *
+   66 00000020         ;                                                       
+                                   *
+   67 00000020         ;*******************************************************
+                       *************
+   68 00000020         
+   69 00000020         AtouI
+   70 00000020 E92D401E        STMFD            SP!, {R1-R4, LR}
+   71 00000024 E3A01000        MOV              R1, #0
+   72 00000028 E3A0200A        MOV              R2, #10
+   73 0000002C         
+   74 0000002C         convert_loop_AtouI
+   75 0000002C E4D03001        LDRB             R3, [R0], #1
+   76 00000030 E3530000        CMP              R3, #0
+   77 00000034 0A000006        BEQ              done_AtouI
+   78 00000038         
+   79 00000038 E2433030        SUB              R3, R3, #'0'
+
+
+
+ARM Macro Assembler    Page 3 
+
+
+   80 0000003C E3530009        CMP              R3, #9
+   81 00000040 8A000006        BHI              error
+   82 00000044         
+   83 00000044 E1A04001        MOV              R4, R1
+   84 00000048 E0010294        MUL              R1, R4, R2
+   85 0000004C E0811003        ADD              R1, R1, R3
+   86 00000050         
+   87 00000050 EAFFFFF5        B                convert_loop_AtouI
+   88 00000054         
+   89 00000054         done_AtouI
+   90 00000054 E1A00001        MOV              R0, R1
+   91 00000058 E8BD401E        LDMFD            SP!, {R1-R4, LR}
+   92 0000005C E12FFF1E        BX               LR
+   93 00000060         
+   94 00000060         error
+   95 00000060 E3A00000        MOV              R0, #0
+   96 00000064 E8BD401E        LDMFD            SP!, {R1-R4, LR}
+   97 00000068 E12FFF1E        BX               LR
+   98 0000006C         
+   99 0000006C         
+  100 0000006C         ;*******************************************************
+                       *************
+  101 0000006C         ;                                                       
+                                   *
+  102 0000006C         ;       Berechnung -> Y = ((2/5) * X)²                 
+                                    *
+  103 0000006C         ;                                                       
+                                   *
+  104 0000006C         ;*******************************************************
+                       *************
+  105 0000006C         
+  106 0000006C         Berechnung
+  107 0000006C E92D401E        STMFD            SP!, {R1-R4, LR}
+  108 00000070         
+  109 00000070 E1A00800        LSL              R0, R0, #16
+  110 00000074 E1A00840        ASR              R0, R0, #16
+  111 00000078         
+  112 00000078 E3500000        CMP              R0, #0
+  113 0000007C 42600000        RSBMI            R0, R0, #0
+  114 00000080         
+  115 00000080 E1A01000        MOV              R1, R0
+  116 00000084 E1A02081        MOV              R2, R1, LSL #1
+  117 00000088         
+  118 00000088 E59F1090        LDR              R1, =0xCCCCCCCD
+  119 0000008C E0843192        UMULL            R3, R4, R2, R1
+  120 00000090 E1A02104        MOV              R2, R4, LSL #2
+  121 00000094         
+  122 00000094 E0000292        MUL              R0, R2, R2
+  123 00000098 E8BD401E        LDMFD            SP!, {R1-R4, LR}
+  124 0000009C E12FFF1E        BX               LR
+  125 000000A0         
+  126 000000A0         
+  127 000000A0         ;*******************************************************
+                       *************
+  128 000000A0         ;                                                       
+                                   *
+  129 000000A0         ;       uItoA - Konvertiert Integer in ASCII-Zeichen    
+                                   *
+  130 000000A0         ;                                                       
+
+
+
+ARM Macro Assembler    Page 4 
+
+
+                                   *
+  131 000000A0         ;*******************************************************
+                       *************
+  132 000000A0         
+  133 000000A0         uItoA
+  134 000000A0 E92D40FE        STMFD            SP!, {R1-R7, LR}
+  135 000000A4 E5903000        LDR              R3, [R0]
+  136 000000A8 E1A04003        MOV              R4, R3
+  137 000000AC E1A05001        MOV              R5, R1
+  138 000000B0 E1A07005        MOV              R7, R5
+  139 000000B4         
+  140 000000B4         convert_loop_uItoA
+  141 000000B4 E59F6064        LDR              R6, =0xCCCCCCCD
+  142 000000B8 E0821694        UMULL            R1, R2, R4, R6
+  143 000000BC E1A021A2        MOV              R2, R2, LSR #3
+  144 000000C0 E3A0300A        MOV              R3, #10
+  145 000000C4 E0010392        MUL              R1, R2, R3
+  146 000000C8 E0441001        SUB              R1, R4, R1
+  147 000000CC E2811030        ADD              R1, R1, #'0'
+  148 000000D0 E4C71001        STRB             R1, [R7], #1
+  149 000000D4 E1A04002        MOV              R4, R2
+  150 000000D8 E3540000        CMP              R4, #0
+  151 000000DC 1AFFFFF4        BNE              convert_loop_uItoA
+  152 000000E0         
+  153 000000E0 E3A03000        MOV              R3, #0
+  154 000000E4 E5C73000        STRB             R3, [R7]
+  155 000000E8         
+  156 000000E8         reverse_loop
+  157 000000E8 E1550007        CMP              R5, R7
+  158 000000EC 2A000004        BHS              done_uItoA
+  159 000000F0 E5D53000        LDRB             R3, [R5]
+  160 000000F4 E5D71000        LDRB             R1, [R7]
+  161 000000F8 E4C51001        STRB             R1, [R5], #1
+  162 000000FC E4473001        STRB             R3, [R7], #-1
+  163 00000100 EAFFFFF8        B                reverse_loop
+  164 00000104         
+  165 00000104         done_uItoA
+  166 00000104 E8BD40FE        LDMFD            SP!, {R1-R7, LR}
+  167 00000108 E12FFF1E        BX               LR
+  168 0000010C         
+  169 0000010C         ;*******************************************************
+                       *************
+  170 0000010C         ;* Konstanten im CODE-Bereich                           
+                                   *
+  171 0000010C         ;*******************************************************
+                       *************
+  172 0000010C 36 35 35 
+              33 35 00 STR_1_Input
+                               DCB              "65535", 0x00
+  173 00000112         
+  174 00000112         ;*******************************************************
+                       *************
+  175 00000112         ;* Ende der Programm-Quelle                             
+                                   *
+  176 00000112         ;*******************************************************
+                       *************
+  177 00000112                 END
+              00 00 00000000 
+              00000000 
+
+
+
+ARM Macro Assembler    Page 5 
+
+
+              00000000 
+              CCCCCCCD 
+Command Line: --debug --xref --depend=.\assembler_startup.d -o.\assembler_start
+up.o -IC:\Keil\ARM\RV31\INC -IC:\Keil\ARM\CMSIS\Include -IC:\Keil\ARM\Inc\Phili
+ps --predefine="__EVAL SETA 1" --list=.\assembler_startup.lst Assembler_Startup
+.s
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Relocatable symbols
+
+Daten 00000000
+
+Symbol: Daten
+   Definitions
+      At line 27 in file Assembler_Startup.s
+   Uses
+      None
+Comment: Daten unused
+Datenanfang 00000000
+
+Symbol: Datenanfang
+   Definitions
+      At line 28 in file Assembler_Startup.s
+   Uses
+      At line 30 in file Assembler_Startup.s
+      At line 31 in file Assembler_Startup.s
+
+Datenende 00000400
+
+Symbol: Datenende
+   Definitions
+      At line 33 in file Assembler_Startup.s
+   Uses
+      None
+Comment: Datenende unused
+STR_1 00000000
+
+Symbol: STR_1
+   Definitions
+      At line 29 in file Assembler_Startup.s
+   Uses
+      At line 48 in file Assembler_Startup.s
+Comment: STR_1 used once
+STR_2 00000200
+
+Symbol: STR_2
+   Definitions
+      At line 30 in file Assembler_Startup.s
+   Uses
+      At line 51 in file Assembler_Startup.s
+Comment: STR_2 used once
+Stack 00000300
+
+Symbol: Stack
+   Definitions
+      At line 31 in file Assembler_Startup.s
+   Uses
+      At line 32 in file Assembler_Startup.s
+Comment: Stack used once
+TopStack 00000400
+
+Symbol: TopStack
+   Definitions
+      At line 32 in file Assembler_Startup.s
+   Uses
+      At line 33 in file Assembler_Startup.s
+      At line 47 in file Assembler_Startup.s
+
+7 symbols
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Relocatable symbols
+
+AtouI 00000020
+
+Symbol: AtouI
+   Definitions
+      At line 69 in file Assembler_Startup.s
+   Uses
+      At line 49 in file Assembler_Startup.s
+Comment: AtouI used once
+Berechnung 0000006C
+
+Symbol: Berechnung
+   Definitions
+      At line 106 in file Assembler_Startup.s
+   Uses
+      At line 50 in file Assembler_Startup.s
+Comment: Berechnung used once
+Programm 00000000
+
+Symbol: Programm
+   Definitions
+      At line 38 in file Assembler_Startup.s
+   Uses
+      None
+Comment: Programm unused
+Reset_Handler 00000000
+
+Symbol: Reset_Handler
+   Definitions
+      At line 40 in file Assembler_Startup.s
+   Uses
+      None
+Comment: Reset_Handler unused
+STR_1_Input 0000010C
+
+Symbol: STR_1_Input
+   Definitions
+      At line 172 in file Assembler_Startup.s
+   Uses
+      None
+Comment: STR_1_Input unused
+convert_loop_AtouI 0000002C
+
+Symbol: convert_loop_AtouI
+   Definitions
+      At line 74 in file Assembler_Startup.s
+   Uses
+      At line 87 in file Assembler_Startup.s
+Comment: convert_loop_AtouI used once
+convert_loop_uItoA 000000B4
+
+Symbol: convert_loop_uItoA
+   Definitions
+      At line 140 in file Assembler_Startup.s
+   Uses
+      At line 151 in file Assembler_Startup.s
+Comment: convert_loop_uItoA used once
+done_AtouI 00000054
+
+Symbol: done_AtouI
+
+
+
+ARM Macro Assembler    Page 2 Alphabetic symbol ordering
+Relocatable symbols
+
+   Definitions
+      At line 89 in file Assembler_Startup.s
+   Uses
+      At line 77 in file Assembler_Startup.s
+Comment: done_AtouI used once
+done_uItoA 00000104
+
+Symbol: done_uItoA
+   Definitions
+      At line 165 in file Assembler_Startup.s
+   Uses
+      At line 158 in file Assembler_Startup.s
+Comment: done_uItoA used once
+endlos 0000001C
+
+Symbol: endlos
+   Definitions
+      At line 57 in file Assembler_Startup.s
+   Uses
+      At line 57 in file Assembler_Startup.s
+Comment: endlos used once
+error 00000060
+
+Symbol: error
+   Definitions
+      At line 94 in file Assembler_Startup.s
+   Uses
+      At line 81 in file Assembler_Startup.s
+Comment: error used once
+main 00000004
+
+Symbol: main
+   Definitions
+      At line 46 in file Assembler_Startup.s
+   Uses
+      None
+Comment: main unused
+reverse_loop 000000E8
+
+Symbol: reverse_loop
+   Definitions
+      At line 156 in file Assembler_Startup.s
+   Uses
+      At line 163 in file Assembler_Startup.s
+Comment: reverse_loop used once
+uItoA 000000A0
+
+Symbol: uItoA
+   Definitions
+      At line 133 in file Assembler_Startup.s
+   Uses
+      At line 52 in file Assembler_Startup.s
+Comment: uItoA used once
+14 symbols
+354 symbols in table
