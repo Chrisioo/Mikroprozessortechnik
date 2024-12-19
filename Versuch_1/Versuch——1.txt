@@ -1,0 +1,190 @@
+;********************************************************************
+;* htw saar - Fakultaet fuer Ingenieurwissenschaften				*
+;* Labor fuer Eingebettete Systeme									*
+;* Mikroprozessortechnik											*
+;********************************************************************
+;* Assembler_Startup.S: 											*
+;* Programmrumpf fuer Assembler-Programme mit dem Keil				*
+;* Entwicklungsprogramm uVision fuer ARM-Mikrocontroller			*
+;********************************************************************
+;* Aufgabe-Nr.:         	*	               						*
+;*              			*						    			*
+;********************************************************************
+;* Gruppen-Nr.: 			*										*
+;*              			*										*
+;********************************************************************
+;* Name / Matrikel-Nr.: 	*										*
+;*							*										*
+;*							*										*
+;********************************************************************
+;* Abgabedatum:         	*              							*
+;*							*										*
+;********************************************************************
+
+;********************************************************************
+;* Daten-Bereich bzw. Daten-Speicher				            	*
+;********************************************************************
+				AREA		Daten, DATA, READWRITE
+Datenanfang
+Str_1			EQU			Datenanfang + 0x100	 ;Address for input string, manually placed in memory
+Str_2			EQU			Datenanfang + 0x200
+Stack			EQU			Datenanfang + 0x300	
+Top_Stack		EQU			Stack + 0x100		 ;256 bytes reserved for the stack
+Datenend		EQU			Top_Stack
+
+;********************************************************************
+;* Programm-Bereich bzw. Programm-Speicher							*
+;********************************************************************
+				AREA		Programm, CODE, READONLY
+				ARM
+Reset_Handler	MSR			CPSR_c, #0x10	     ; User Mode aktivieren
+
+;********************************************************************
+;* Hier das eigene (Haupt-)Programm einfuegen   					*
+;********************************************************************
+
+main
+				LDR			SP, =Top_Stack 	     ; load Stack Pointer
+				LDR     	R0, =Str_1       
+				BL      	AtouI            
+				BL      	Berechnung       
+				LDR     	R1, =Str_2
+				BL      	uItoA            
+
+				
+;********************************************************************
+;* Ende des eigenen (Haupt-)Programms                               *
+;********************************************************************
+endlos			B			endlos
+
+;********************************************************************
+;* ab hier Unterprogramme                                           *
+;********************************************************************
+
+;********************************************************************
+; AtouI:  ASCII-String -> unsigned Integer							*
+; Input:  R0 = Adresse des Strings									*	
+; Output: R0 = konvertierte 32-Bit Zahl								*
+;********************************************************************
+
+AtouI           
+                STMFD       SP!,{R1-R4, LR}   	; Save registers and link register
+
+                MOV         R1, #0            	; Initialize result to 0
+                MOV         R2, #10           	; Prepare factor for multiplication by 10
+
+convert_loop_1
+                LDRB        R3, [R0], #1      	; Load current character and increment pointer
+                CMP         R3, #0            	; Check if the character is '\0'
+                BEQ         done_1            	; If '\0', end conversion
+
+                SUB         R3, R3, #'0'      	; Convert ASCII character to numeric value
+                CMP         R3, #9            	; Ensure it's a valid digit (0-9)
+                BHI         error             	; If invalid, jump to error handling
+					
+				MOV			R4,	R1
+                MUL         R1, R4, R2        	; Multiply current result by 10
+                ADD         R1, R1, R3        	; Add the numeric value to the result
+
+                B           convert_loop_1     
+
+done_1
+				MOV         R0, R1            	; Move the final result to R0
+				LDMFD       SP!, {R1-R4, LR}  	; Restore registers and LR
+				BX          LR                	; Return again (switch mode if needed)
+
+error
+                MOV         R0, #0            	; If error, return 0
+                LDMFD 		SP!,{R1-R4, LR}   	; Restore registers and the link register
+				BX			LR				  	; Return to caller
+
+;********************************************************************
+; Berechnung: Y = ((2/5)*X)^2										*
+; Input: 	  R0 = X												*	
+; Output:     R0 = Y												*
+;********************************************************************
+
+Berechnung
+                STMFD   	SP!, {R1-R4, LR}   	
+
+; Step 1: Convert negative number to positive if necessary
+
+			   ;change 16 bits sighed number to 32 bits sighed number			   		
+				LSL 		R0, R0,  #16	    ; Shift the value in R0 left by 16 bits.
+				ASR 		R0, R0,  #16   	    ; Perform an arithmetic shift right by 16 bits.   		
+	
+                CMP     	R0, #0              ; Compare R0 (X) with 0
+                RSBMI   	R0, R0, #0          ; If R0 is negative (MI), reverse subtract it from 0 to make it positive
+				
+
+; Step 2: 2 * X
+                MOV     	R1, R0              ; R1 = X
+                MOV     	R2, R1, LSL #1      ; R2 = 2 * X (left shift by 1)
+
+; Step 3: Division by 5 using magic number 0xCCCCCCCD
+                LDR     	R1, =0xCCCCCCCD     ; Load the magic number 0xCCCCCCCD into R1
+                UMULL   	R3, R4, R2, R1      ; Unsigned multiply: R2 * 0xCCCCCCCD
+                MOV     	R2, R4, LSR #2      ; R2 = R4 >> 2 (divide high result by 2^2)
+
+; Step 4: Y = ((2 * X) / 5)^2
+                MUL     	R0, R2, R2          ; R0 = R2 * R2 
+
+                LDMFD   	SP!, {R1-R4, LR}   
+                BX			LR             	   
+				
+;********************************************************************
+;* uItoA:  Unsigned Integer to ASCII                                *
+;* Input:  R0 = Number to convert                                   *
+;*         R1 = Address to store the ASCII string                   *
+;* Output: ASCII string in memory with null terminator              *
+;********************************************************************
+
+uItoA
+				STMFD   	SP!, {R1-R7, LR}
+				LDR			R3, [R0]
+				MOV     	R4, R3              ; R4 = number to convert
+				MOV     	R5, R1              ; R5 = address for string
+				MOV     	R7, R5              ; R7 = current position in string
+
+convert_loop_2
+				LDR     	R6, =0xCCCCCCCD
+				UMULL   	R1, R2, R4, R6      ; Multiply by magic number
+				MOV     	R2, R2, LSR #3      ; Shift right by SHIFT
+				MOV    		R3, #10
+				MUL     	R1, R2, R3          ; Multiply quotient by 10
+				SUB     	R1, R4, R1          ; Subtract to get remainder
+				ADD     	R1, R1, #'0'        ; Convert remainder to ASCII
+				STRB    	R1, [R7], #1        ; Store ASCII char and increment pointer
+				MOV     	R4, R2              ; Update number with quotient
+				CMP     	R4, #0              ; Check if we're done
+				BNE     	convert_loop_2
+
+				MOV     	R3, #0              ; Null terminator
+				STRB    	R3, [R7]            ; Store null terminator
+
+    ; Reverse the string (same as before)
+reverse_loop
+				CMP     	R5, R7              ; Check if start pointer is at or beyond end pointer
+				BHS     	done_2              ; If pointers meet, we're done
+				LDRB    	R3, [R5]            ; Load byte from start pointer
+				LDRB    	R1, [R7]            ; Load byte from end pointer
+				STRB    	R1, [R5], #1        ; Store byte from end to start pointer
+				STRB    	R3, [R7], #-1       ; Store byte from start to end pointer
+				B       	reverse_loop               
+
+done_2
+				LDMFD   	SP!, {R1-R7, LR}   ; Restore registers and the link register
+                BX			LR 
+
+;********************************************************************
+;* Konstanten im CODE-Bereich                                       *
+;********************************************************************
+
+;Str_1_input  DCB  "65535",0x00
+
+
+;********************************************************************
+;* Ende der Programm-Quelle                                         *
+;********************************************************************
+
+				END
