@@ -10,11 +10,11 @@
 ;* Aufgabe-Nr.:         	* 1	               						*
 ;*              			*						    			*
 ;********************************************************************
-;* Gruppen-Nr.: 			* 3. Gruppe Freitag						*
+;* Gruppen-Nr.: 			* 3. Gruppe Freitag 1+2 Stunde			*
 ;*              			*										*
 ;********************************************************************
 ;* Name / Matrikel-Nr.: 	* Christian Petry / 3847497				*
-;*							* Xudong Zhang /						*
+;*							* Xudong Zhang / 5014211				*
 ;*							*										*
 ;********************************************************************
 ;* Abgabedatum:         	* 20.12.2024            				*
@@ -26,10 +26,10 @@
 ;********************************************************************
 				AREA		Daten, DATA, READWRITE
 Datenanfang
-STR_1           EQU         Datenanfang + 0x100                     ; Adresse für ersten String STR_1
+STR_1           EQU         Datenanfang + 0x100                     ; Adresse für ersten String STR_1, Input
 STR_2           EQU         Datenanfang + 0x200                     ; Adresse für zweiten String STR_2, Ausgabe
 Stack           EQU         Datenanfang + 0x300                     ; Stack
-TopStack        EQU         Stack + 0x100                           ; Obergrenze des Stacks                                 
+TopStack        EQU         Stack + 0x100                           ; Obergrenze des Stacks, 256 Byte reserviert                                 
 
 ;********************************************************************
 ;* Programm-Bereich bzw. Programm-Speicher							*
@@ -67,32 +67,33 @@ endlos			B			endlos                                  ; Endlosschleife
 
 AtouI
                 STMFD      	SP!, {R1-R4, LR}                        ; Speichern von Registern R1-R4 und und Rücksprungadresse auf Stack
-                MOV         R1, #0                                  ; R1 = 0  
-                MOV         R2, #10                                 ; R2 = 10            
+                MOV         R1, #0                                  ; Initialisierung von Ergebnis R1 = 0
+                MOV         R2, #10                                 ; Initialisierung von Multiplikator R2 = 10            
 
 convert_loop_AtouI
                 LDRB        R3, [R0], #1                            ; Laden von aktuellem Zeichen in R3 und Inkrementierung von R0
+                CMP         R3, #0x00                               ; Vergleiche R3 mit '\0'
                 BEQ         done_AtouI                              ; Wenn R3 = 0, dann gehe zu done_AtouI        
 
-                SUB         R3, R3, #'0'                            ; R3 = R3 - '0' 
-                CMP         R3, #9                                  ; Vergleiche R3 mit 9
-                BHI         error
+                SUB         R3, R3, #'0'                            ; Konvertierung von ASCII-Zeichen in Integer
+                CMP         R3, #9                                  ; Prüfen, ob R3 Zahl zwischen 0 und 9 ist
+                BHI         error                                   ; Wenn R3 > 9, dann gehe zu error
 
-                MOV         R4, R1
-                MUL         R1, R4, R2
-                ADD         R1, R1, R3
+                MOV         R4, R1                                  ; Initialisierung von R4 mit R1
+                MUL         R1, R4, R2                              ; Berechnung von R4 * R2, speichern in R1
+                ADD         R1, R1, R3                              ; Berechnung von R1 + R3, speichern in R1
 
-                B           convert_loop_AtouI
+                B           convert_loop_AtouI                      ; Gehe zu convert_loop_AtouI
 
 done_AtouI
-                MOV         R0, R1
-                LDMFD       SP!, {R1-R4, LR}
-                BX          LR
+                MOV         R0, R1                                  ; Speichern von Ergebnis in R0
+                LDMFD       SP!, {R1-R4, LR}                        ; Laden von Registern R1-R4 und Rücksprungadresse vom Stack
+                BX          LR                                      ; Sprung zur Rücksprungadresse
 
 error
-                MOV         R0, #0
-                LDMFD       SP!, {R1-R4, LR}
-                BX          LR
+                MOV         R0, #0                                  ; R0 = 0
+                LDMFD       SP!, {R1-R4, LR}                        ; Laden von Registern R1-R4 und Rücksprungadresse vom Stack
+                BX          LR                                      ; Sprung zur Rücksprungadresse
 
 
 ;********************************************************************
