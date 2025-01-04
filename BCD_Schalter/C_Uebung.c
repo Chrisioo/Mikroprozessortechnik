@@ -59,59 +59,59 @@ int main (void)
  	/* Endlosschleife */	
  	while (1)  
 	{
-		int switchPosition = readBCDSwitchPosition();
-		IO1CLR = 0x00FF0000; // Clear LED bits
-		IO1SET = (switchPosition << 16); // Set LED bits according to switch position
-		IO1CLR = 0x000000FF; // Clear 7-segment display bits
-		IO1SET = sevenSegmentLookupTable[switchPosition]; // Set 7-segment display bits
+		int switchPosition = readBCDSwitchPosition();					// Read switch position
+		IO1CLR = 0x00FF0000; 											// Clear LED bits
+		IO1SET = (switchPosition << 16); 								// Set LED bits according to switch position
+		IO1CLR = 0x000000FF; 											// Clear 7-segment display bits
+		IO1SET = sevenSegmentLookupTable[switchPosition]; 				// Set 7-segment display bits
 	}
 }
 
 int readSwitchPosition (void)
 {
-  return (IO0PIN & 0x00000001);
+  	return (IO0PIN & 0x00000001);										// Read switch position from P0.0
+																		// Return 1 if switch is pressed, 0 otherwise
 }
 
 int readBCDSwitchPosition (void)
 {
-  return ((IO0PIN & 0x0000000E) >> 1);
+  	return ((IO0PIN & 0x0000000E) >> 1);								// Read BCD switch position from P0.1 to P0.3
+																		// Return switch position as integer			
 }
 
 void initLED (void)
 {
-  IO1DIR |= 0x00FF0000;
+  	IO1DIR |= 0x00FF0000;												// Set P1.16 to P1.23 as output					
 }
 
 void init7Segment (void)
 {
-  IO1DIR |= 0x000000FF;
+  	IO1DIR |= 0x000000FF;												// Set P1.0 to P1.7 as output		
 }
 
 void initTimer (void)
 {
-  T0TCR = 0x02; // Reset Timer
-  T0PR = 0x00; // Prescaler value
-  T0MR0 = 0x00000000; // Match Register 0
-  T0MCR = 0x03; // Match Control Register
-  T0TCR = 0x01; // Enable Timer
+	T0TCR = 0x02; 														// Reset Timer
+	T0PR = 0x00; 														// Prescaler value
+	T0MR0 = 0x00000000; 												// Match Register 0
+	T0MCR = 0x03; 														// Match Control Register
+	T0TCR = 0x01; 														// Enable Timer
 }
 
 void initInterrupt (void)
 {
-  VICIntSelect = 0x00000000; // IRQ
-  VICIntEnable = 0x00000010; // Enable Timer0 Interrupt
-  VICVectCntl0 = 0x20 | 4; // Enable Timer0 IRQ Slot
-  VICVectAddr0 = 0x00; // Set Interrupt Vector Address
+	VICIntSelect = 0x00000000; 											// IRQ
+	VICIntEnable = 0x00000010; 											// Enable Timer0 Interrupt
+	VICVectCntl0 = 0x20 | 4; 											// Enable Timer0 IRQ Slot
+	VICVectAddr0 = 0x00; 												// Set Interrupt Vector Address
 }
 
 void interruptServiceRoutine (void)
 {
-  if (T0IR == 0x01)
-  {
 	T0IR = 0x01;
-	IO1SET = 0x000000FF;
-	IO1CLR = 0x000000FF;
-  }
+	T0TCR = 0x00;
+	T0MR0 = 0x00000000;
+	T0TCR = 0x01;
 }
 
 void timerInterrupt (void)
