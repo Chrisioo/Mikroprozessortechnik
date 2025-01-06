@@ -26,96 +26,67 @@
 
 #include <LPC21xx.H>		/* LPC21xx Definitionen                     */
 
-unsigned char sevenSegmentLookupTable[10] = {
-	0x3F, // 0
-	0x06, // 1
-	0x5B, // 2
-	0x4F, // 3
-	0x66, // 4
-	0x6D, // 5
-	0x7D, // 6
-	0x07, // 7
-	0x7F, // 8
-	0x6F  // 9
+const unsigned int sevenSegmentLookupTable[10] = {
+    0x3F, // 0: 0011 1111
+    0x06, // 1: 0000 0110
+    0x5B, // 2: 0101 1011
+    0x4F, // 3: 0100 1111
+    0x66, // 4: 0110 0110
+    0x6D, // 5: 0110 1101
+    0x7D, // 6: 0111 1101
+    0x07, // 7: 0000 0111
+    0x7F, // 8: 0111 1111
+    0x6F  // 9: 0110 1111
 };
 
 void initLED (void);
 void init7Segment (void);
-void initTimer (void);
-void initInterrupt (void);
-int readSwitchPosition (void);
-int readBCDSwitchPosition (void);
-void interruptServiceRoutine (void);
-void timerInterrupt (void);
+void initBCDSwitch (void);
+unsigned int readBCDSwitchPosition (void);
+void display7Segment (unsigned int number);
+void displayLED (unsigned int number);
 
-int main (void)  
-{
+int main (void) {
 	/* Initialisierung */
 	initLED();
 	init7Segment();
-	initTimer();
-	initInterrupt();
-	
+	initBCDSwitch();
  	/* Endlosschleife */	
  	while (1)  
 	{
-		int switchPosition = readBCDSwitchPosition();					// Read switch position
-		IO1CLR = 0x00FF0000; 											// Clear LED bits
-		IO1SET = (switchPosition << 16); 								// Set LED bits according to switch position
-		IO1CLR = 0x000000FF; 											// Clear 7-segment display bits
-		IO1SET = sevenSegmentLookupTable[switchPosition]; 				// Set 7-segment display bits
+		unsigned int number = readBCDSwitchPosition();
+		if (number < 10) {
+			display7Segment(number);
+			displayLED(number);
+		}
 	}
 }
 
-int readSwitchPosition (void)
-{
-  	return (IO0PIN & 0x00000001);										// Read switch position from P0.0
-																		// Return 1 if switch is pressed, 0 otherwise
+void initLED (void) {
+	PINSEL2 = 0x00000000; 							// set P1.16 to P1.31 as GPIO
+	IODIR1 = 0x00FF0000; 							// set P1.16 to P1.23 as output
 }
 
-int readBCDSwitchPosition (void)
-{
-  	return ((IO0PIN & 0x0000000E) >> 1);								// Read BCD switch position from P0.1 to P0.3
-																		// Return switch position as integer			
+void init7Segment (void) {
+	PINSEL1 &= ~0x003FC000; 						// set P0.0 to P0.15 as GPIO
+	IODIR0 |= 0x007C0000; 							// set P0.18 to P0.24 as output
 }
 
-void initLED (void)
-{
-  	IO1DIR |= 0x00FF0000;												// Set P1.16 to P1.23 as output					
+void initBCDSwitch (void) {
+	PINSEL0 &= ~0x000FF000; 						// set P0.10 to P0.13 as GPIO
+	IODIR0 &= ~0x00003C00; 							// set P0.10 to P0.13 as input
 }
 
-void init7Segment (void)
-{
-  	IO1DIR |= 0x000000FF;												// Set P1.0 to P1.7 as output		
+unsigned int readBCDSwitchPosition (void) {
+	return (IOPIN0 >> 10) & 0x0F;					// read P0.10 to P0.13
 }
 
-void initTimer (void)
-{
-	T0TCR = 0x02; 														// Reset Timer
-	T0PR = 0x00; 														// Prescaler value
-	T0MR0 = 0x00000000; 												// Match Register 0
-	T0MCR = 0x03; 														// Match Control Register
-	T0TCR = 0x01; 														// Enable Timer
+void display7Segment (unsigned int number) {
+	IOCLR0 = 0x007C0000; 							// clear P0.18 to P0.24
+	IOSET0 = sevenSegmentLookupTable[number] << 18; // set P0.18 to P0.24
 }
 
-void initInterrupt (void)
-{
-	VICIntSelect = 0x00000000; 											// IRQ
-	VICIntEnable = 0x00000010; 											// Enable Timer0 Interrupt
-	VICVectCntl0 = 0x20 | 4; 											// Enable Timer0 IRQ Slot
-	VICVectAddr0 = 0x00; 												// Set Interrupt Vector Address
-}
-
-void interruptServiceRoutine (void)
-{
-	T0IR = 0x01;
-	T0TCR = 0x00;
-	T0MR0 = 0x00000000;
-	T0TCR = 0x01;
-}
-
-void timerInterrupt (void)
-{
-  T0MR0 = 0x00000000;
-  T0TCR = 0x01;
+void displayLED (unsigned int number) {
+	IOCLR1 = 0x000F0000; 							// clear P1.16 to P1.23
+	IOSET1 = (number << 16) & 0x000F0000; 			// set P1.16 to P1.23
 }
