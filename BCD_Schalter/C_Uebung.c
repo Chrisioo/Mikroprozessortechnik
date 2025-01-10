@@ -64,17 +64,17 @@ int main (void) {
 
 void initLED (void) {
 	PINSEL2 = 0x00000000; 							// set P1.16 to P1.31 as GPIO
-	IODIR1 = 0x00FF0000; 							// set P1.16 to P1.23 as output
+	IODIR1 = 0x000F0000; 							// set P1.16 to P1.19 as output
 }
 
 void init7Segment (void) {
-	PINSEL1 &= ~0x003FC000; 						// set P0.0 to P0.15 as GPIO
-	IODIR0 |= 0x007C0000; 							// set P0.18 to P0.24 as output
+	PINSEL1 = 0x003FC000; 							// set P0.0 to P0.15 as GPIO
+	IODIR0 = 0x01FC0000; 							// set P0.18 to P0.24 as output
 }
 
 void initBCDSwitch (void) {
-	PINSEL0 &= ~0x000FF000; 						// set P0.10 to P0.13 as GPIO
-	IODIR0 &= ~0x00003C00; 							// set P0.10 to P0.13 as input
+	PINSEL0 = 0x00000000; 							// set P0.10 to P0.13 as GPIO
+	IODIR0 &= 0xF3FFFFFF; 							// set P0.10 to P0.13 as input
 }
 
 unsigned int readBCDSwitchPosition (void) {
