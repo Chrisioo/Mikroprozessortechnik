@@ -51,7 +51,7 @@ void initLED (void) {
 
 __irq void timerISR(void) {
 	IOCLR1 = 0x00FF0000; 								// Turn off all LEDs
-    IOSET1 = ledState << 16; 							// Set LEDs
+    IOSET1 = currentLED << 16; 							// Set LEDs
 
     if (direction == 1) {
         currentLED <<= 1;
