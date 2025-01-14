@@ -30,7 +30,6 @@ volatile unsigned int direction = 1;
 volatile unsigned int currentLED = 0;
 
 void initLED (void);
-void updateLED (void);
 void initTimer (void);
 
 int main (void)  
@@ -46,45 +45,34 @@ int main (void)
 }
 
 void initLED (void) {
-	PINSEL2 = 0x00000000;		
-	IODIR0 = 0x00FF0000;		
+	IODIR1 |= 0x00FF0000;								// P1.16 to P1.23 as output
+	IOCLR1 = 0x00FF0000;								// Turn off all LEDs
 }
 
-void updateLED (void) {
-	IOCLR0 = 0x00FF0000;		
-	IOSET0 = (1 << (currentLED + 16));
+__irq void timerISR(void) {
+	IOCLR1 = 0x00FF0000; 								// Turn off all LEDs
+    IOSET1 = ledState << 16; 							// Set LEDs
 
-	if (direction == 1) {
-		if (currentLED < 7) {
-			currentLED++;
-		} else {
-			direction = 0;
-		}
-	} else {
-		if (currentLED > 0) {
-			currentLED--;
-		} else {
-			direction = 1;
-		}
-	}
-}
+    if (direction == 1) {
+        currentLED <<= 1;
+        if (currentLED == 0x80) direction = -1; 		// Change direction
+    } else {
+        currentLED >>= 1;
+        if (currentLED == 0x01) direction = 1;			// Change direction
+    }
 
-void TIMER0_IRQHandler(void) {
-	if (T0IR & 0x01) {
-		T0IR = 0x01;
-		updateLED();
-	}
-	VICVectAddr = 0;
+    T0IR = 0x01;          								// Clear interrupt flag
+    VICVectAddr = 0x00;   								// End of Interrupt
 }
 
 void initTimer (void) {
-	T0TCR = 0x02;			
-	T0PR = 12499;		
-	T0MR0 = 1000;		
-	T0MCR = 0x03;			
-	T0TCR = 0x01;			
-	VICIntSelect &= ~0x10;
-	VICVectAddr4 = (unsigned int)TIMER0_IRQHandler;
-	VICVectCntl4 = 0x20 | 4;
-	VICIntEnable = 0x10;
+	T0TCR = 0x02;										// Reset Timer
+	T0PR = 12499;										// Prescaler
+	T0MR0 = 1000;										// Match Register 0, set to 1000ms = 1s
+	T0MCR = 0x03;										// Interrupt and Reset on MR0
+	T0TCR = 0x01;										// Start Timer
+
+	VICIntSelect &= ~(1 << 4);							// Timer0 selected as IRQ
+	VICVectAddr4 = (unsigned int)timerISR;				// Set interrupt vector 
+	VICIntEnable |= (1 << 4);							// Enable Timer0 Interrupt
 }
