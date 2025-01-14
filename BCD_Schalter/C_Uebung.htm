@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\C_Uebung.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\C_Uebung.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5.03 [Build 76]: Last Updated: Fri Jan 10 12:57:56 2025
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5.03 [Build 76]: Last Updated: Tue Jan 14 12:05:37 2025
 <BR><P>
 <H3>Maximum Stack Usage =          8 bytes + Unknown(Functions without stacksize, Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -174,7 +174,7 @@ Global Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[10]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__user_setup_stackheap
 </UL>
 
-<P><STRONG><a name="[1e]"></a>displayLED</STRONG> (ARM, 24 bytes, Stack size 0 bytes, c_uebung.o(.text))
+<P><STRONG><a name="[1e]"></a>displayLED</STRONG> (ARM, 28 bytes, Stack size 0 bytes, c_uebung.o(.text))
 <BR><BR>[Called By]<UL><LI><a href="#[a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
@@ -186,19 +186,19 @@ Global Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[1b]"></a>initBCDSwitch</STRONG> (ARM, 36 bytes, Stack size 0 bytes, c_uebung.o(.text))
+<P><STRONG><a name="[1b]"></a>initBCDSwitch</STRONG> (ARM, 24 bytes, Stack size 0 bytes, c_uebung.o(.text))
 <BR><BR>[Called By]<UL><LI><a href="#[a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[1a]"></a>init7Segment</STRONG> (ARM, 28 bytes, Stack size 0 bytes, c_uebung.o(.text))
+<P><STRONG><a name="[1a]"></a>init7Segment</STRONG> (ARM, 24 bytes, Stack size 0 bytes, c_uebung.o(.text))
 <BR><BR>[Called By]<UL><LI><a href="#[a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[19]"></a>initLED</STRONG> (ARM, 28 bytes, Stack size 0 bytes, c_uebung.o(.text))
+<P><STRONG><a name="[19]"></a>initLED</STRONG> (ARM, 24 bytes, Stack size 0 bytes, c_uebung.o(.text))
 <BR><BR>[Called By]<UL><LI><a href="#[a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[a]"></a>main</STRONG> (ARM, 56 bytes, Stack size 0 bytes, c_uebung.o(.text))
+<P><STRONG><a name="[a]"></a>main</STRONG> (ARM, 48 bytes, Stack size 0 bytes, c_uebung.o(.text))
 <BR><BR>[Calls]<UL><LI><a href="#[19]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;initLED
 <LI><a href="#[1a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;init7Segment
 <LI><a href="#[1b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;initBCDSwitch
