@@ -26,7 +26,7 @@
 
 #include <LPC21xx.H>		/* LPC21xx Definitionen                     */
 
-const unsigned int sevenSegmentLookupTable[10] = {
+const unsigned int bcdLookupTable[10] = {
     0x3F, // 0: 0011 1111
     0x06, // 1: 0000 0110
     0x5B, // 2: 0101 1011
@@ -79,7 +79,7 @@ unsigned int readBCDSwitchPosition (void) {
 
 void display7Segment (unsigned int number) {
 	IOCLR0 = 0x007C0000; 							// clear P0.18 to P0.24
-	IOSET0 = sevenSegmentLookupTable[number] << 18; // set P0.18 to P0.24
+	IOSET0 = bcdLookupTable[number] << 18; // set P0.18 to P0.24
 }
 
 void displayLED (unsigned int number) {
