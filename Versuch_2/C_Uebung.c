@@ -25,7 +25,7 @@
 /********************************************************************/
 
 #include <LPC21xx.H>		/* LPC21xx Definitionen */
-#include "Header.h"			/* Makros fuer Hardwarezugriff */
+#include "Header.h"			/* Header-Datei */
 
 /**
  * Lookup-Table fuer BCD-Werte
@@ -39,7 +39,7 @@
  */
 
 static const unsigned int bcdLookupTable[10] = {
-    SEGMENT_A,
+  	SEGMENT_A,
 	SEGMENT_B,
 	SEGMENT_C,
 	SEGMENT_D,
@@ -48,8 +48,6 @@ static const unsigned int bcdLookupTable[10] = {
 	SEGMENT_G
 };
 
-volatile unsigned int ledPattern = 0;
-volatile unsigned int bcdSwitchPosition = 0;
 
 // Definieren der Funktionen
 void initLED (void);							// Initialisierung der LED
@@ -106,13 +104,16 @@ unsigned int readBCDSwitchValue (void) {
 }
 
 void readBCDSwitchPosition (void) {
-	bcdSwitchPosition = (IOPIN0 & BCD_SWITCH_POSITION) >> 16;	// BCD-Schalterposition einlesen, IOPIN0 = GPIO Port 0 Pin Value Register
-																// Bitwise AND mit BCD_SWITCH_POSITION
-																// Logical Shift um 16, um nur die Bits 16-17 zu betrachten
+	volatile unsigned int bcdSwitchPosition = 
+		(IOPIN0 & BCD_SWITCH_POSITION) >> 16;				// BCD-Schalterposition einlesen, IOPIN0 = GPIO Port 0 Pin Value Register
+															// Bitwise AND mit BCD_SWITCH_POSITION
+															// Logical Shift um 16, um nur die Bits 16-17 zu betrachten
 
 }
 
 void T0isr (void) __irq {
+	static unsigned int ledPattern = 0;
+	unsigned int bcdSwitchPosition = 0;
 	if (bcdSwitchPosition & 0x00000002) {		// Check, ob BCD-Schalterposition gesetzt ist, Bitwise AND mit 0x2
 		ledPattern = (ledPattern << 1) | 1;		// LED-Pattern um 1 nach links schieben und 1 hinzufuegen
 
@@ -132,11 +133,11 @@ void T0isr (void) __irq {
 int main (void)  
 {
 	/* Initialisierung */
-	unsigned int bcdInput = 0;					// BCD-Eingabe
-
-	initLED();									// Initialisierung der LED
-	initBCDSwitch();							// Initialisierung des BCD-Schalters
-	initTimer();								// Initialisierung des Timers
+	unsigned int bcdInput = 0;						// BCD-Eingabe
+	unsigned int bcdSwitchPosition = 0;				// BCD-Schalterposition
+	initLED();										// Initialisierung der LED
+	initBCDSwitch();								// Initialisierung des BCD-Schalters
+	initTimer();									// Initialisierung des Timers
 	
  	/* Endlosschleife */	
  	while (1)  
