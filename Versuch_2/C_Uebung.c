@@ -37,7 +37,6 @@
  * Segment f = Bit 23
  * Segment g = Bit 24
  */
-
 static const unsigned int bcdLookupTable[10] = {
   	SEGMENT_A,
 	SEGMENT_B,
@@ -59,19 +58,30 @@ unsigned int readBCDSwitchValue (void);			// Einlesen des BCD-Schalters
 void readBCDSwitchPosition (void);				// Einlesen der BCD-Schalterposition
 void T0isr (void) __irq;						// Timer-Interrupt-Service-Routine
 
-// Initialisierung der LED
+/**
+ * Initialisierung der LED
+ * Setzt Pins P1.16 - P1.23 als Ausgang fuer LEDs und schaltet alle LEDs durch Clear Register aus
+ */
 void initLED (void) {
 	IODIR1 = LED_MASK;							// P1.16 - P1.23 als Ausgang setzen, IODIR1 = GPIO Port 1 Direction Control Register
 	IOCLR1 = LED_MASK;							// Alle LEDs ausschalten, IOCLR1 = GPIO Port 1 Clear Register
 }
 
-// Initialisierung des BCD-Schalters
+/**
+ * Initialisierung des BCD-Schalters
+ * Setzt Pins P0.18 - P0.23 als Ausgang fuer 7-Segment-Anzeige und schaltet alle Segmente durch Clear Register aus
+ */
 void initBCDSwitch (void) {
 	IODIR0 = SEVEN_SEGMENT_MASK;				// P0.18 - P0.23 als Ausgang setzen, IODIR0 = GPIO Port 0 Direction Control Register
 	IOCLR0 = SEVEN_SEGMENT_MASK;				// Alle Segmente ausschalten, IOCLR0 = GPIO Port 0 Clear Register
 }
 
-// Initialisierung des Timers
+/**
+ * Initialisierung des Timers
+ * Konfiguriert Timer 0 fuer 1kHz und Interrupt bei Match-Register 0
+ * Setzt Match-Register auf 500, so dass Interrupt alle 0,5 Sekunden auftritt
+ * Konfiguriert Match Control Register zum Ausloesen eines Interrupts und zuruecksetzen des Timers
+ */
 void initTimer (void) {
 	T0PR = PRESCALER_VALUE;						// Prescaler fuer 1kHz, T0PR = Timer 0 Prescale Register
 	T0MR0 = 500;								// Match-Register auf 500 setzen, T0MR0 = Timer 0 Match Register 0
@@ -83,7 +93,10 @@ void initTimer (void) {
 	VICIntEnable = 0x00000010;					// Timer-Interrupt aktivieren, VICIntEnable = Interrupt Enable Register
 }
 
-// Aktualisierung des BCD
+/**
+ * Aktualisiert die 7-Segment-Anzeige basierend auf uebergebenem BCD-Wert
+ * Schaltet alle Segmente durch Clear Register aus und setzt Segmente basierend auf BCD-Wert durch Set Register
+ */
 void updateBCD (unsigned int bcdValue) {
 	if (bcdValue > BCD_MAX_VALUE) {				// Check, ob BCD-Wert groesser als maximaler Wert
 		bcdValue = BCD_MAX_VALUE;				// Wenn ja, dann maximalen Wert setzen
@@ -92,17 +105,29 @@ void updateBCD (unsigned int bcdValue) {
 	IOSET0 = bcdLookupTable[bcdValue];			// BCD-Wert setzen, wird durch Lookup-Table bestimmt, IOSET0 = GPIO Port 0 Set Register
 }
 
-// Aktualisierung der LED
+/**
+ * Aktualisiert die LED basierend auf uebergebenem LED-Wert
+ * Schaltet alle LEDs durch Clear Register aus und setzt LEDs basierend auf LED-Wert durch Set Register auf P1.16 - P1.23
+ */
 void updateLED (unsigned int ledValue) {
 	IOCLR1 = LED_MASK;							// Alle LEDs ausschalten, IOCLR1 = GPIO Port 1 Clear Register
 	IOSET1 = ledValue << 16;					// LED-Wert setzen, wird durch Bitshift bestimmt, IOSET1 = GPIO Port 1 Set Register
 }
 
+/**
+ * Liest den BCD-Schalterwert von P0.16 - P0.19 ein
+ * Maskiert nicht benoetigte Bits und gibt den BCD-Schalterwert zurueck
+ */
 unsigned int readBCDSwitchValue (void) {
 	return (IOPIN0 >> 16) & 0x0000000F;			// BCD-Schalterwert einlesen, IOPIN0 = GPIO Port 0 Pin Value Register
 												// Bitshift um 16, um nur die Bits 16-19 zu betrachten
 }
 
+/**
+ * Lies die BCD-Schalterposition von P0.16 - P0.17 ein
+ * Gibt an, ob der BCD-Schalter gesetzt ist
+ * Wert wird in Variable bcdSwitchPosition gespeichert
+ */
 void readBCDSwitchPosition (void) {
 	volatile unsigned int bcdSwitchPosition = 
 		(IOPIN0 & BCD_SWITCH_POSITION) >> 16;				// BCD-Schalterposition einlesen, IOPIN0 = GPIO Port 0 Pin Value Register
@@ -111,6 +136,13 @@ void readBCDSwitchPosition (void) {
 
 }
 
+/**
+ * Liest aktuelle Schalterposition ein
+ * Bei bestimmter Schalterposition wird LED-Pattern um 1 nach links geshiftet
+ * Muster wird durch updateLED() auf LEDs gesetzt
+ * Wenn LED-Pattern groesser als maximaler Wert, dann auf 0 setzen
+ * Setzt Timer-Interrupt-Flag zurueck, beendet Interrupt
+ */
 void T0isr (void) __irq {
 	static unsigned int ledPattern = 0;
 	unsigned int bcdSwitchPosition = 0;
@@ -129,7 +161,13 @@ void T0isr (void) __irq {
 	VICVectAddr = 0x00000000;					// Interrupt bestaetigen, VICVectAddr = Vector Address Register
 }
 
-
+/**
+ * Hauptprogramm
+ * Initialisierung der LED, des BCD-Schalters und des Timers
+ * Endlosschleife zum Einlesen des BCD-Schalters 
+ * 		- Wenn aktiv, dann BCD-Wert einlesen und in 7-Segment-Anzeige setzen
+ * 		- Wenn nicht aktiv, dann 7-Segment-Anzeige ausschalten
+ */
 int main (void)  
 {
 	/* Initialisierung */
