@@ -25,12 +25,7 @@
 /********************************************************************/
 
 #include <LPC21xx.H>		/* LPC21xx Definitionen */
-
-#define SEVEN_SEGMENT_MASK 			0x00FC0000		// P0.18 - P0.23
-#define LED_MASK 					0x00FF0000		// P1.16 - P1.23
-#define BCD_SWITCH_POSITION			0x00030000		// P0.16 - P0.17	
-#define BCD_MAX_VALUE				9				// Maximaler Wert fuer BCD
-#define LED_MAX_VALUE				0xFF			// Maximaler auf LED darstellbarer Wert
+#include "Header.h"			/* Makros fuer Hardwarezugriff */
 
 /**
  * Lookup-Table fuer BCD-Werte
@@ -44,22 +39,19 @@
  */
 
 static const unsigned int bcdLookupTable[10] = {
-    0x00FC0000,		// 0, Segmente a bis f
-	0x00180000,		// 1, Segmente b-c
-	0x016C0000,		// 2, Segmente a-b-d-e-g
-	0x013C0000,		// 3, Segmente a-b-c-d-g
-	0x01980000,		// 4, Segmente b-c-f-g
-	0x01B40000,		// 5, Segmente a-c-d-f-g
-	0x01F40000,		// 6, Segmente a-c-d-e-f-g
-	0x001C0000,		// 7, Segmente a-b-c
-	0x01FC0000,		// 8, Segmente a-b-c-d-e-f-g
-	0x01BC0000		// 9, Segmente a-b-c-d-f-g
+    SEGMENT_A,
+	SEGMENT_B,
+	SEGMENT_C,
+	SEGMENT_D,
+	SEGMENT_E,
+	SEGMENT_F,
+	SEGMENT_G
 };
 
 volatile unsigned int ledPattern = 0;
 volatile unsigned int bcdSwitchPosition = 0;
 
-// Funktionsprototypen
+// Definieren der Funktionen
 void initLED (void);							// Initialisierung der LED
 void initBCDSwitch (void);						// Initialisierung des BCD-Schalters
 void initTimer (void);							// Initialisierung des Timers
@@ -83,7 +75,7 @@ void initBCDSwitch (void) {
 
 // Initialisierung des Timers
 void initTimer (void) {
-	T0PR = 12499;								// Prescaler fuer 1kHz, T0PR = Timer 0 Prescale Register
+	T0PR = PRESCALER_VALUE;						// Prescaler fuer 1kHz, T0PR = Timer 0 Prescale Register
 	T0MR0 = 500;								// Match-Register auf 500 setzen, T0MR0 = Timer 0 Match Register 0
 	T0MCR = 0x00000003;							// Timer-Interrupt bei Match-Register 0, T0MCR = Timer 0 Match Control Register
 	T0TCR = 0x00000001;							// Timer starten, T0TCR = Timer 0 Control Register
