@@ -17,12 +17,15 @@
 #define MATCH_WERT                  500             // Match-Wert für 0.5 Sekunden
 
 /* BCD-Werte auf 7-Segment */
-#define SEGMENT_A                   0x00040000		// P0.18
-#define SEGMENT_B                   0x00080000		// P0.19
-#define SEGMENT_C                   0x00100000		// P0.20
-#define SEGMENT_D                   0x00200000		// P0.21
-#define SEGMENT_E                   0x00400000		// P0.22
-#define SEGMENT_F                   0x00800000		// P0.23
-#define SEGMENT_G                   0x01000000		// P0.24
+#define SEGMENT_0                   0x00FC0000      // 0
+#define SEGMENT_1                   0x00180000      // 1
+#define SEGMENT_2                   0x016C0000      // 2
+#define SEGMENT_3                   0x013C0000      // 3
+#define SEGMENT_4                   0x01980000      // 4
+#define SEGMENT_5                   0x01B40000      // 5
+#define SEGMENT_6                   0x01F40000      // 6
+#define SEGMENT_7                   0x001C0000      // 7
+#define SEGMENT_8                   0x01FC0000      // 8
+#define SEGMENT_9                   0x01BC0000      // 9
 
 #endif

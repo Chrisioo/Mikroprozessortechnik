@@ -32,13 +32,16 @@ Segment e = Bit 22
 Segment f = Bit 23
 Segment g = Bit 24*/
 static const unsigned int bcdLookupTable[10] = {
-    SEGMENT_A,
-    SEGMENT_B,
-    SEGMENT_C,
-    SEGMENT_D,
-    SEGMENT_E,
-    SEGMENT_F,
-    SEGMENT_G
+    SEGMENT_0,
+    SEGMENT_1,
+    SEGMENT_2,
+    SEGMENT_3,
+    SEGMENT_4,
+    SEGMENT_5,
+    SEGMENT_6,
+    SEGMENT_7,
+    SEGMENT_8,
+    SEGMENT_9
 };
 
 
