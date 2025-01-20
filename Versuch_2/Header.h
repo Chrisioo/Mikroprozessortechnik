@@ -2,7 +2,7 @@
 #define HEADER_H
 
 /* Masken */
-#define SIEBEN_SEGMENT_MASKE 		0x00FC0000		// P0.18 - P0.23, Bits 7-Segment-Anzeige
+#define SIEBEN_SEGMENT_MASKE 		0x01FC0000		// P0.18 - P0.24, Bits 7-Segment-Anzeige
 #define LED_MASKE 					0x00FF0000		// P1.16 - P1.23, Bits LED
 #define KIPPSCHALTER_MASKE          0x00030000		// P0.16 - P0.17, Bits Kippschalter
 #define BCD_DREHSCHALTER_MASKE      0x00003C00      // P0.10 - P0.13, Bits BCD-Drehschalter

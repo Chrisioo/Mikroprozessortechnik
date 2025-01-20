@@ -106,9 +106,9 @@ void T0isr(void) __irq {									// -- -> Compiler übernimmt save & load von Re
         if (ledMuster > LED_MAXIMUM) {						// Bei Überschreitung zurücksetzen
             ledMuster = 0;									// Wenn g_ledPattern das Muster überschreitet :
         }													// auf 0 setzen, um neu zu starten
-        updateLEDs(ledMuster);								// Übetragen des Musters auf ARM-MP 	
+        updateLED(ledMuster);								// Übetragen des Musters auf ARM-MP 	
     } else {												// Schalter nicht aktiv ? -> LEDs ausschalten
-        updateLEDs(0);										// Alle LEDs ausschalten
+        updateLED(0);										// Alle LEDs ausschalten
     }                                            
 															// Interrupt-Flag des Timer0 zurücksetzen
     T0IR = 0x01;											// sonst: Timer läuft weiter
@@ -151,10 +151,10 @@ int main(void) {
 		switchState = readSwitchState();	
 		// BCD-Anzeige aktualisieren
         if (switchState & 0x1) {
-            bcdInput = readInputBCD();
-            updateBCD(bcdInput);
+            bcdInput = readBCDInput();
+            update7Segment(bcdInput);
         } else {
-            IOCLR0 = SEGMENT_MASK; 			        	 // BCD-Anzeige löschen
+            IOCLR0 = SIEBEN_SEGMENT_MASKE; 			        	 // BCD-Anzeige löschen
         }
     }
 }
