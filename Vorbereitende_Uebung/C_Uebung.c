@@ -27,10 +27,10 @@
 #include <LPC21xx.H>		/* LPC21xx Definitionen                     */
 
 #define BAUDRATE 			4800
-#define DATENBITS 			8
+#define DATENBITS 		8
 #define STOPBITS 			1
 #define PARITY 				0
-#define PERIPHERIE_CLOCK 	15000000
+#define PERIPHERIE_CLOCK 	12500000
 
 /**
  * Initialisierung der seriellen Schnittstelle UART0
@@ -50,7 +50,7 @@ void initUart0 (int baudRate, short datenBits, short stopBits, short parity) {
 	U0DLL = divisor & 0xFF;
 
 	/* 8 Datenbits, 1 Stopbit, keine Paritaet einstellen */
-	U0CLR = ((datenBits - 5) & 0x03) |			/* 5..8 Datenbits */
+	U0LCR = ((datenBits - 5) & 0x03) |			/* 5..8 Datenbits */
 			((stopBits == 2) << 2) |			/* 1 oder 2 Stopbits */
 			((parity != 0) << 3) |				/* Paritaet: 0=keine, 1=gerade aktiviert */
 			((parity == 2) << 4);				/* Paritaetsmodus: 1 = ungerade, 2 = gerade */
@@ -77,11 +77,13 @@ char UART0_receiveChar() {
 
 int main (void)  
 {
+	char c;
 	/* Initialisierung */
 	initUart0(BAUDRATE, DATENBITS, STOPBITS, PARITY);
 
 	/* Ausgabe Chars '0' bis '9' */
-	for (char c = '0'; c <= '9'; c++) {
+	
+	for ( c = '0'; c <= '9'; c++) {
 		UART0_sendChar(c);
 	}
 
