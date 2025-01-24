@@ -94,41 +94,37 @@ unsigned int readSwitchState(void) {
 }
 
 // Timer-Interrupt-Service-Routine
-void T0isr(void) __irq {									// -- -> Compiler übernimmt save & load von Reg.
-	unsigned int switchState = readSwitchState();
-	// Volatile Variablen für ISR-Kommunikation
+void T0isr(void) __irq {
+	unsigned int switchState = readSwitchState();           // Schalter-Status einlesen, in switchState speichern
 	static unsigned int ledMuster = 0;             			// Aktuelles LED-Muster
-															// irq weil wir keinen Fast Interrupt Request senden
 															// LED-Muster bei aktivem Schalter aktualisieren
-    if (switchState & 0x2) {								// Schalter aktiv ?  -> LEDs werden aktualisiert
-        ledMuster = (ledMuster << 1) + 1;   				// Neues LED-Muster : verschieben des Bitmusters 
-															// Addition 1 : nächste LED einschalten	 																				   
-        if (ledMuster > LED_MAXIMUM) {						// Bei Überschreitung zurücksetzen
-            ledMuster = 0;									// Wenn g_ledPattern das Muster überschreitet :
-        }													// auf 0 setzen, um neu zu starten
-        updateLED(ledMuster);								// Übetragen des Musters auf ARM-MP 	
-    } else {												// Schalter nicht aktiv ? -> LEDs ausschalten
-        updateLED(0);										// Alle LEDs ausschalten
+    if (switchState & 0x2) {								// Check ob Schalter aktiv
+        ledMuster = (ledMuster << 1) + 1;   				// Wenn ja, Muster um 1 nach links schieben und 1 hinzufügen	 																				   
+        if (ledMuster > LED_MAXIMUM) {						// Check, ob Muster größer als LED_MAXIMUM
+            ledMuster = 0;									// Wenn ja, Muster auf 0 setzen, erneuter Durchlauf
+        }													
+        updateLED(ledMuster);								// Darstellung des Musters auf LED-Anzeige	
+    } else {
+        updateLED(0);										// Wenn Schalter nicht aktiv, alle LEDs ausschalten
     }                                            
-															// Interrupt-Flag des Timer0 zurücksetzen
-    T0IR = 0x01;											// sonst: Timer läuft weiter
-    VICVectAddr = 0x00;										// Wir informieren VIC: Bearbeitung fertig		
+    T0IR = 0x01;											// Interrupt-Flag löschen
+    VICVectAddr = 0x00;										// ISR beenden
 }
 
 // Timer initialisieren
 void initTimer(void) {
-// Timer-Konfiguration
-    T0PR = TAKTFREQUENZ - 1;    							// Prescaler für 1 kHz ( 1 MS pro Tick ) 
+    // Timer-Konfiguration
+    T0PR = TAKTFREQUENZ - 1;    							// Prescaler für 1 kHz (1 MS pro Tick) 
 															// Timer zählt alle 12500 Takte einmal
-    T0MR0 = MATCH_WERT;                                   	// Match-Wert für 0.5 Sekunden ausgelöst
+    T0MR0 = MATCH_WERT;                                   	// Match-Wert für 0,5 Sekunden ausgelöst
 	
-															// Match Control Register :
-															// Bit 0 : Aktiviert Interrupt für M0
-															// Bit 1 : Setzt Timer Zähler nach Match zurück
+															// Match Control Register:
+															// Bit 0: Aktiviert Interrupt für M0
+															// Bit 1: Setzt Timer Zähler nach Match zurück
     T0MCR = 0x03;                                  			// Interrupt und Reset bei Match
     T0TCR = 0x01;                                  			// Timer starten
 
- // Interrupt-Konfiguration
+    // Interrupt-Konfiguration
     VICVectAddr4 = (unsigned long)T0isr;           			// Speichern Adresse für ISR Kanal 0, 
 															// T0isr als ISR für Timer 0 registriert
     VICVectCntl4 = 0x24;                           			// Kanal 4 aktivieren - Bit 5
