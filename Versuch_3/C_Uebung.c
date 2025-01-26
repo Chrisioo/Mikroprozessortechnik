@@ -1,11 +1,11 @@
 /********************************************************************/
 /*  Hochschule fuer Technik und Wirtschaft                          */
-/*  Fakult�t fuer Ingenieurwissenschaften                           */
+/*  Fakultät fuer Ingenieurwissenschaften                           */
 /*  Labor fuer Eingebettete Systeme                                 */
 /*  Mikroprozessortechnik                                           */
 /********************************************************************/
 /*                                                                  */
-/*  C_�bung.C:                                                      */
+/*  C_Übung.C:                                                      */
 /*	  Programmrumpf fuer C-Programme mit dem Keil                   */
 /*    Entwicklungsprogramm uVision fuer ARM-Mikrocontroller         */
 /*                                                                  */
@@ -13,18 +13,18 @@
 /*  Aufgaben-Nr.:        *                                          */
 /*                       *                                          */
 /********************************************************************/
-/*  Gruppen-Nr.: 	       *                                          */
+/*  Gruppen-Nr.: 	     *                                          */
 /*                       *                                          */
 /********************************************************************/
-/*  Name / Matrikel-Nr.: *                                          */
-/*                       *                                          */
+/*  Name / Matrikel-Nr.: *          Christian Petry / 3847497       */
+/*                       *          Xudong Zhang / 5014211          */
 /*                       *                                          */
 /********************************************************************/
-/* 	Abgabedatum:         *                                          */
+/* 	Abgabedatum:         *                 31.01.2025               */
 /*                       *                                          */
 /********************************************************************/
 
-#include "LPC21xx.h" /* LPC21xx Definitionen                     */
+#include "LPC21xx.h" /* LPC21xx Definitionen */
 
 #define BAUDRATE 19200
 #define DATENBITS 8
@@ -67,15 +67,16 @@ void UART1_sendChar(char c)
 	/* Warten, bis Sendepuffer leer ist */
 	while (!(U1LSR & 0x20))
 		; // U1LSR: Line Status Register, 0x20: THRE (Transmitter Holding Register Empty) bit,
-		  // 1: Transmitter Holding Register is empty, and the next character that is written to the THR will be transmitted out on the TXD pin.
-		  // 0: Transmitter Holding Register is full. The THR is full and cannot accept any more data.
+		  // 1: THR is empty, and the next character that is written to the THR will be transmitted out on the TXD pin.
+		  // 0: THR is full. The THR is full and cannot accept any more data.
 	/* Zeichen senden */
 	U1THR = c;
 }
 
 void UART1_sendString(char *s)
 {
-	while (*s)
+
+	while (*s) // while the string is not null-terminated
 	{
 		UART1_sendChar(*s);
 		s++;
@@ -94,16 +95,16 @@ char UART1_receiveChar()
 void UART1_sendHexDump(unsigned char *address)
 {
 	int i;
-	char hexDigits[] = "0123456789ABCDEF";
+	char hexDigits[] = "0123456789ABCDEF"; // used as a lookup table for converting a nibble to a hex digit
 
-	// send address
+	/* send address */
 	for (i = 28; i >= 0; i -= 4)
 	{
 		UART1_sendChar(hexDigits[((unsigned int)address >> i) & 0xF]);
 	}
 	UART1_sendString(": ");
 
-	// send 16 bytes of data
+	/* send 16 bytes of data */
 	for (i = 0; i < 16; i++)
 	{
 		unsigned char c = *address++;
@@ -117,13 +118,13 @@ void UART1_sendHexDump(unsigned char *address)
 
 int main(void)
 {
-	char input[9]; //  for 8 hex digits and a null terminator
+	char input[9]; // initialize an input buffer with 8 characters and a null terminator
 	int index = 0;
 	int i;
 	unsigned int address;
 	char hexDigits[] = "0123456789ABCDEF";
 
-	/* Initialisierung */
+	/* Initialisierung des UART1 */
 	initUart1(BAUDRATE, DATENBITS, STOPBITS, PARITY);
 
 	UART1_sendString("Ready to receive address:\r\n");
@@ -139,6 +140,8 @@ int main(void)
 		{
 			input[index] = '\0'; // null-terminate the string
 			address = 0;
+
+			/* Debug: print the received input */
 			UART1_sendString("Received input: ");
 			UART1_sendString(input);
 			UART1_sendString("\r\n");
@@ -161,7 +164,7 @@ int main(void)
 				}
 			}
 
-			// Debug: print the converted address
+			/* Debug: print the converted address */
 			UART1_sendString("Converted address: ");
 			for (i = 28; i >= 0; i -= 4)
 			{
@@ -169,7 +172,7 @@ int main(void)
 			}
 			UART1_sendString("\r\n");
 
-			// check if the address is in the valid range
+			/* check if the address is in the valid range */
 			if (address < 0x40000000 || address > 0x40007FFF)
 			{
 				UART1_sendString("Invalid address range.\r\n");
@@ -181,7 +184,7 @@ int main(void)
 			index = 0; // reset index for next input
 		}
 		else if (index < 8)
-		{ // make sure we don't overflow the input buffer
+		{ /* make sure we don't overflow the input buffer */
 			input[index++] = receivedChar;
 		}
 	}
