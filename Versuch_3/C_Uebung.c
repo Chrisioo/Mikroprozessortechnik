@@ -24,7 +24,7 @@
 /*                       *                                          */
 /********************************************************************/
 
-#include <LPC21xx.H> /* LPC21xx Definitionen                     */
+#include "LPC21xx.h" /* LPC21xx Definitionen                     */
 
 #define BAUDRATE 19200
 #define DATENBITS 8
@@ -32,17 +32,17 @@
 #define PARITY 1
 #define PERIPHERIE_CLOCK 12500000
 
-void initUart0(int baudRate, short datenBits, short stopBits, short parity)
+void initUart1(int baudRate, short datenBits, short stopBits, short parity)
 {
 
 	unsigned int divisor;
 
 	/* 1. Port-Pins für TxD und RxD konfigurieren */
-	PINSEL0 |= 0x00050000; // P0.8 = TXD1, P0.9 = RXD1
+	PINSEL0 |= 0x00050000; // P0.8 = TXD1, P0.9 = RXD1, to aktivieren UART1
 
 	/* 2. Anzahl Datenbits, Stop-Bits und Parität in UxLCR einstellen dabei DLAB-Bit setzen */
 	U1LCR = 0x80;					   /* DLAB = 1, um auf den Divisor zuzugreifen */
-	U0LCR = ((datenBits - 5) & 0x03) | /* 5..8 Datenbits */
+	U1LCR = ((datenBits - 5) & 0x03) | /* 5..8 Datenbits */
 			((stopBits == 2) << 2) |   /* 1 oder 2 Stopbits */
 			((parity != 0) << 3) |	   /* Paritaet: 0=keine, 1=gerade aktiviert */
 			((parity == 2) << 4);	   /* Paritaetsmodus: 1 = ungerade, 2 = gerade */
@@ -62,57 +62,57 @@ void initUart0(int baudRate, short datenBits, short stopBits, short parity)
 	// Beispiel: U1IER = 0x01; // RBR Interrupt freigeben
 }
 
-void UART0_sendChar(char c)
+void UART1_sendChar(char c)
 {
 	/* Warten, bis Sendepuffer leer ist */
-	while (!(U0LSR & 0x20))
-		;
+	while (!(U1LSR & 0x20))
+		; // U1LSR: Line Status Register, 0x20: THRE (Transmitter Holding Register Empty) bit,
+		  // 1: Transmitter Holding Register is empty, and the next character that is written to the THR will be transmitted out on the TXD pin.
+		  // 0: Transmitter Holding Register is full. The THR is full and cannot accept any more data.
 	/* Zeichen senden */
-	U0THR = c;
+	U1THR = c;
 }
 
-void UART0_sendString(char *s)
+void UART1_sendString(char *s)
 {
 	while (*s)
 	{
-		UART0_sendChar(*s);
+		UART1_sendChar(*s);
 		s++;
 	}
 }
 
-char UART0_receiveChar()
+char UART1_receiveChar()
 {
-	/* Warten, bis Empfangspuffer gef�llt ist */
-	while (!(U0LSR & 0x01))
+	/* Warten, bis Empfangspuffer gefüllt ist */
+	while (!(U1LSR & 0x01))
 		;
 	/* Zeichen empfangen */
-	return U0RBR;
+	return U1RBR;
 }
-void UART0_sendHex(unsigned char value)
-{
-	char hexDigits[] = "0123456789ABCDEF";
-	UART0_sendChar(hexDigits[value >> 4]);	 // send high 4 bits
-	UART0_sendChar(hexDigits[value & 0x0F]); // send low 4 bits
-}
-void UART0_sendHexDump(unsigned char *addr)
+
+void UART1_sendHexDump(unsigned char *address)
 {
 	int i;
+	char hexDigits[] = "0123456789ABCDEF";
 
 	// send address
 	for (i = 28; i >= 0; i -= 4)
 	{
-		UART0_sendChar("0123456789ABCDEF"[((unsigned int)addr >> i) & 0xF]);
+		UART1_sendChar(hexDigits[((unsigned int)address >> i) & 0xF]);
 	}
-	UART0_sendString(": ");
+	UART1_sendString(": ");
 
-	// send 16 bytes of hex data
+	// send 16 bytes of data
 	for (i = 0; i < 16; i++)
 	{
-		UART0_sendHex(addr[i]);
-		UART0_sendChar(' ');
+		unsigned char c = *address++;
+		UART1_sendChar(hexDigits[(c >> 4) & 0xF]);
+		UART1_sendChar(hexDigits[c & 0xF]);
+		UART1_sendChar(' ');
 	}
 
-	UART0_sendString("\r\n\r\n");
+	UART1_sendString("\r\n");
 }
 
 int main(void)
@@ -121,18 +121,28 @@ int main(void)
 	int index = 0;
 	int i;
 	unsigned int address;
+	char hexDigits[] = "0123456789ABCDEF";
+
 	/* Initialisierung */
-	initUart0(BAUDRATE, DATENBITS, STOPBITS, PARITY);
+	initUart1(BAUDRATE, DATENBITS, STOPBITS, PARITY);
+
+	UART1_sendString("Ready to receive address:\r\n");
 
 	/* Endlosschleife */
 	while (1)
 	{
-		char receivedChar = UART0_receiveChar();
+		char receivedChar = UART1_receiveChar();
 
-		if (receivedChar == '\r')
-		{						 // CR (0x0D) stands for the end of input
+		UART1_sendChar(receivedChar); // echo the received character
+
+		if (receivedChar == '\r') // CR (0x0D) stands for the end of input
+		{
 			input[index] = '\0'; // null-terminate the string
 			address = 0;
+			UART1_sendString("Received input: ");
+			UART1_sendString(input);
+			UART1_sendString("\r\n");
+
 			for (i = 0; i < index; i++)
 			{
 				char c = input[i];
@@ -150,7 +160,24 @@ int main(void)
 					address |= (c - 'a' + 10);
 				}
 			}
-			UART0_sendHexDump((unsigned char *)address);
+
+			// Debug: print the converted address
+			UART1_sendString("Converted address: ");
+			for (i = 28; i >= 0; i -= 4)
+			{
+				UART1_sendChar(hexDigits[(address >> i) & 0xF]);
+			}
+			UART1_sendString("\r\n");
+
+			// check if the address is in the valid range
+			if (address < 0x40000000 || address > 0x40007FFF)
+			{
+				UART1_sendString("Invalid address range.\r\n");
+				index = 0; // reset index for next input
+				continue;
+			}
+
+			UART1_sendHexDump((unsigned char *)address);
 			index = 0; // reset index for next input
 		}
 		else if (index < 8)
