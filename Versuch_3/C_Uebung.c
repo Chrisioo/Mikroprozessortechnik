@@ -41,11 +41,11 @@ void initUart1(int baudRate, short datenBits, short stopBits, short parity)
 	PINSEL0 |= 0x00050000; // P0.8 = TXD1, P0.9 = RXD1, to aktivieren UART1
 
 	/* 2. Anzahl Datenbits, Stop-Bits und Parität in UxLCR einstellen dabei DLAB-Bit setzen */
-	U1LCR = 0x80;					   /* DLAB = 1, um auf den Divisor zuzugreifen */
+	U1LCR = 0x80;						/* DLAB = 1, um auf den Divisor zuzugreifen */
 	U1LCR |= ((datenBits - 5) & 0x03) | /* 5..8 Datenbits */
-			((stopBits == 2) << 2) |   /* 1 oder 2 Stopbits */
-			((parity != 0) << 3) |	   /* Paritaet: 0=keine, 1=gerade aktiviert */
-			((parity == 1) << 4);	   /* Paritaetsmodus: 00 = ungerade, 01 = gerade */
+			 ((stopBits == 2) << 2) |	/* 1 oder 2 Stopbits */
+			 ((parity != 0) << 3) |		/* Paritaet: 0=keine, 1=gerade aktiviert */
+			 ((parity == 1) << 4);		/* Paritaetsmodus: 00 = ungerade, 01 = gerade */
 
 	/* 3. Frequenzteiler für Baudrate berechnen. Low-Byte in UxDLL. High-Byte UxDLM. */
 	divisor = PERIPHERIE_CLOCK / (16 * baudRate);
@@ -127,6 +127,7 @@ int main(void)
 	/* Initialisierung des UART1 */
 	initUart1(BAUDRATE, DATENBITS, STOPBITS, PARITY);
 
+	UART1_sendString("0123456789\r\n");
 	UART1_sendString("Ready to receive address:\r\n");
 
 	/* Endlosschleife */
