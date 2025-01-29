@@ -30,16 +30,29 @@
 #define DATENBITS 8
 
 volatile int running = 0; // 1: Timer läuft, 0: Timer gestoppt
-volatile int hours = 0, minutes = 0, seconds = 0;
+volatile int total_seconds = 0;
 
-unsigned int readBCD()
+void initUart0(void);
+void UART0_sendChar(char c);
+void UART0_sendString(char *s);
+char UART0_receiveChar(void);
+void initTimer(void);
+void timerISR(void);
+void initExIn(void);
+void toggleStopwatch(void);
+void displayTime(void);
+void resetStopwatch(void);
+void startStopwatch(void);
+void stopStopwatch(void);
+void formatTime(char *buffer, int total_seconds);
+
+unsigned int readBCD(void)
 {
-	return (IOPIN0 >> 10) & 0x0F;
+	return (IOPIN0 >> 10) & 0x0F; // P0.10 - P0.13 BCDSWITCH
 }
 
 int getBaudRate(int bcdSwitch)
 {
-
 	switch (bcdSwitch)
 	{
 	case 0:
@@ -67,14 +80,15 @@ int getBaudRate(int bcdSwitch)
 	}
 }
 
-void initUart0()
+void initUart0(void)
 {
-
 	unsigned int divisor;
 	short datenBits = DATENBITS;
 	short stopBits;
 	short parity;
 	short parityMode;
+	int bcdSwitch;
+	int baudRate;
 
 	/* read the current state of the switches */
 	int S1 = (IOPIN0 & (1 << 16)) ? 1 : 0; // P0.16
@@ -87,8 +101,8 @@ void initUart0()
 	parity = (S1 == 0) ? 0 : 1;		// 0: no parity, 1: parity
 
 	/* read the BCD switch */
-	int bcdSwitch = readBCD();
-	int baudRate = getBaudRate(bcdSwitch);
+	bcdSwitch = readBCD();
+	baudRate = getBaudRate(bcdSwitch);
 
 	/* 1. Port-Pins für TxD und RxD konfigurieren */
 	PINSEL0 |= 0x05; // P0.0 = TXD0, P0.1 = RXD0, to aktivieren UART0
@@ -97,11 +111,12 @@ void initUart0()
 	U0LCR = 0x80;						/* DLAB = 1, um auf den Divisor zuzugreifen */
 	U0LCR |= ((datenBits - 5) & 0x03) | /* 5..8 Datenbits */
 			 ((stopBits == 2) << 2) |	/* 1 oder 2 Stopbits */
-			 ((parity != 0) << 3) |		/* Paritaet: 0=keine, 1=gerade aktiviert */
-			 ((parity == 1) << 4);		/* Paritaetsmodus: 00 = ungerade, 01 = gerade */
+			 (parity << 3) |			/* Paritaet: 0=keine, 1=aktiviert */
+			 (parityMode << 4);			/* Paritaetsmodus: 00 = ungerade, 01 = gerade */
 
 	/* 3. Frequenzteiler für Baudrate berechnen. Low-Byte in UxDLL. High-Byte UxDLM. */
 	divisor = PERIPHERIE_CLOCK / (16 * baudRate);
+
 	U0DLM = (divisor >> 8) & 0xFF;
 	U0DLL = divisor & 0xFF;
 
@@ -112,77 +127,120 @@ void initUart0()
 	U0FCR = 0x07; // FIFO aktivieren und RX- und TX-FIFOs loeschen
 
 	/* 6. Wenn Interrupt ausgelöst werden soll, dann entsprechenden Interrupt in UxIER freigeben */
-	// Beispiel: U1IER = 0x01; // RBR Interrupt freigeben
+	// Beispiel: U0IER = 0x01; // RBR Interrupt freigeben
 }
 
 void UART0_sendChar(char c)
 {
-	/* Warten, bis Sendepuffer leer ist */
 	while (!(U0LSR & 0x20))
-		; // U1LSR: Line Status Register, 0x20: THRE (Transmitter Holding Register Empty) bit,
-		  // 1: THR is empty, and the next character that is written to the THR will be transmitted out on the TXD pin.
-		  // 0: THR is full. The THR is full and cannot accept any more data.
-	/* Zeichen senden */
+		;
 	U0THR = c;
 }
 
 void UART0_sendString(char *s)
 {
-
-	while (*s) // while the string is not null-terminated
+	while (*s)
 	{
 		UART0_sendChar(*s);
 		s++;
 	}
 }
 
-char UART0_receiveChar()
+char UART0_receiveChar(void)
 {
-	/* Warten, bis Empfangspuffer gefüllt ist */
 	while (!(U0LSR & 0x01))
 		;
-	/* Zeichen empfangen */
 	return U0RBR;
 }
 
-void initTimer()
+void initTimer(void)
 {
-	T0MR0 = PERIPHERIE_CLOCK;				// 1秒
-	T0MCR = 3;								// Interrupt und Reset bei MR0
-	T0TCR = 1;								// Timer starten
-	VICVectAddr0 = (unsigned long)timerISR; // ISR-Adresse
-	VICVectCntl0 = 0x20 | 4;				// Slot 0, Timer 0
-	VICIntEnable = 1 << 4;					// Timer 0 Interrupt freigeben
+	T0PR = 12500; // Prescaler für den Timer, 12500 = 1ms
+	T0TCR = 0x02; // Timer zurücksetzen
+	T0MCR = 0x03; // Interrupt und Reset bei Match
+	T0MR0 = 1000; // 1s
+	T0TCR = 0x00; // Timer anhalten
+
+	/* Timer 0 Interrupt aktivieren */
+	VICVectAddr4 = (unsigned long)timerISR;
+	VICVectCntl4 = 0x24;
+	VICIntEnable |= 0x10;
 }
 
+/* Timer-Interrupt-Service-Routine */
 void timerISR(void)
 {
 	if (running)
 	{
-		seconds++;
-		if (seconds == 60)
+		total_seconds++;
+		if (total_seconds == 3600) // 1 Stunde
 		{
-			seconds = 0;
-			minutes++;
-			if (minutes == 60)
-			{
-				minutes = 0;
-				hours++;
-				if (hours == 60)
-				{
-					hours = 0;
-					running = 0;
-					UART0_sendString("Stoppuhr erreicht 59:59:59 und wird angehalten.\n");
-				}
-			}
+			total_seconds = 0;
+			running = 0;
+			UART0_sendString("Stoppuhr erreicht 1 Stunde und wird angehalten.\n");
 		}
 	}
 	T0IR = 1;		 // Interrupt-Flag löschen
 	VICVectAddr = 0; // VIC-Adressregister löschen
 }
 
-void formatTime(char *buffer, int hours, int minutes, int seconds)
+/* Initialisierung des externen Interrupts */
+void initExIn(void)
 {
+	PINSEL0 |= 0x80000000;						   // P0.15 als EINT2
+	EXTMODE |= 0x04;							   // EINT2 als Flanken-Interrupt
+	VICVectCntl0 = 0x30;						   // EINT2 als IRQ
+	VICVectAddr0 = (unsigned long)toggleStopwatch; // Adresse der ISR
+	VICIntEnable = 0x10000;						   // EINT2 aktivieren
+}
+
+void toggleStopwatch(void)
+{
+	if (running)
+	{
+		stopStopwatch();
+	}
+	else
+	{
+		startStopwatch();
+	}
+	EXTINT = 0x4;	 // Interrupt-Flag löschen
+	VICVectAddr = 0; // VIC-Adressregister löschen
+}
+
+void displayTime(void)
+{
+	char buffer[9];
+	formatTime(buffer, total_seconds);
+	UART0_sendString(buffer);
+}
+
+void resetStopwatch(void)
+{
+	total_seconds = 0;
+	UART0_sendString("Stoppuhr zurückgesetzt.\n");
+}
+
+void startStopwatch(void)
+{
+	running = 1;
+	T0TCR = 0x01; // start timer
+	UART0_sendString("Stoppuhr gestartet.\n");
+}
+
+void stopStopwatch(void)
+{
+	running = 0;
+	T0TCR = 0x00; // stop timer
+	UART0_sendString("Stoppuhr angehalten.\n");
+}
+
+void formatTime(char *buffer, int total_seconds)
+{
+	int hours = total_seconds / 3600;
+	int minutes = (total_seconds % 3600) / 60;
+	int seconds = total_seconds % 60;
+
 	buffer[0] = '0' + (hours / 10);
 	buffer[1] = '0' + (hours % 10);
 	buffer[2] = ':';
@@ -195,29 +253,58 @@ void formatTime(char *buffer, int hours, int minutes, int seconds)
 	buffer[9] = '\0';
 }
 
-void displayTime(void)
+int main(void)
 {
-	char buffer[9];
-	formatTime(buffer, hours, minutes, seconds);
-	UART0_sendString(buffer);
-}
+	char input;
 
-void resetStopwatch(void)
-{
-	hours = 0;
-	minutes = 0;
-	seconds = 0;
-	UART0_sendString("Stoppuhr zurückgesetzt.\n");
-}
+	initUart0();
+	initTimer();
+	initExIn();
 
-void startStopwatch(void)
-{
-	running = 1;
-	UART0_sendString("Stoppuhr gestartet.\n");
-}
+	UART0_sendString("Stopp-Uhr\n");
+	UART0_sendString("Start und Anhalten durch Drücken der Interrupt-Taste\n");
+	UART0_sendString("s, S - Start und Anhalten\n");
+	UART0_sendString("a, A - Anzeige des Standes\n");
+	UART0_sendString("r, R - Rücksetzen der Stoppuhr\n");
 
-void stopStopwatch(void)
-{
-	running = 0;
-	UART0_sendString("Stoppuhr angehalten.\n");
+	while (1)
+	{
+		input = UART0_receiveChar();
+
+		switch (input)
+		{
+		case 's':
+		case 'S':
+			if (running)
+			{
+				stopStopwatch();
+			}
+			else
+			{
+				startStopwatch();
+			}
+			break;
+		case 'a':
+		case 'A':
+			displayTime();
+			break;
+		case 'r':
+		case 'R':
+			if (!running)
+			{
+				resetStopwatch();
+			}
+			else
+			{
+				UART0_sendString("Fehler: Stoppuhr läuft noch!\n");
+			}
+			break;
+		default:
+			UART0_sendString("Falsche Eingabe!\n");
+			UART0_sendString("s, S - Start und Anhalten\n");
+			UART0_sendString("a, A - Anzeige des Standes\n");
+			UART0_sendString("r, R - Rücksetzen der Stoppuhr\n");
+			break;
+		}
+	}
 }
