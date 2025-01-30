@@ -24,34 +24,12 @@
 /*                       *                                          */
 /********************************************************************/
 
-#include "LPC21xx.h" /* LPC21xx Definitionen */
-
-#define PERIPHERIE_CLOCK 12500000
-#define DATENBITS 8
-
-volatile int running = 0; // 1: Timer läuft, 0: Timer gestoppt
-volatile int total_seconds = 0;
-volatile int current_digit = 0;
+#include "LPC21xx.h"  /* LPC21xx Definitionen */
+#include "C_Uebung.h" /* eigene Definitionen */
 
 const unsigned int bcdLookupTable[10] = {
-	0x0FC0000, 0x180000, 0x16C0000, 0x13C0000, 0x1980000,
-	0x1B40000, 0x1F40000, 0x1C0000, 0x1FC0000, 0x1BC0000};
-
-void initUart0(void);
-void UART0_sendChar(char c);
-void UART0_sendString(char *s);
-char UART0_receiveChar(void);
-void initTimer(void);
-void timerISR(void);
-void initExIn(void);
-void toggleStopwatch(void);
-void displayTime(void);
-void resetStopwatch(void);
-void startStopwatch(void);
-void stopStopwatch(void);
-void formatTime(char *buffer, int total_seconds);
-void initSeg(void);
-void updateSegmentDisplay(void);
+	SEGMENT_0, SEGMENT_1, SEGMENT_2, SEGMENT_3, SEGMENT_4,
+	SEGMENT_5, SEGMENT_6, SEGMENT_7, SEGMENT_8, SEGMENT_9};
 
 unsigned int readBCD(void)
 {
@@ -83,7 +61,7 @@ int getBaudRate(int bcdSwitch)
 	case 9:
 		return 57600;
 	default:
-		return 57600; // default to 57600
+		return 57600;
 	}
 }
 
@@ -162,11 +140,12 @@ char UART0_receiveChar(void)
 
 void initTimer(void)
 {
-	T0PR = 12500; // Prescaler für den Timer, 12500 = 1ms
-	T0TCR = 0x02; // Timer zurücksetzen
-	T0MCR = 0x03; // Interrupt und Reset bei Match
-	T0MR0 = 1000; // 1s
-	T0TCR = 0x00; // Timer anhalten
+
+	T0PR = TIMER_PRESCALER;		   // Prescaler für den Timer, 12500 = 1ms
+	T0TCR = TIMER_RESET;		   // Timer zurücksetzen
+	T0MCR = TIMER_INTERRUPT_RESET; // Interrupt und Reset bei Match
+	T0MR0 = TIMER_MATCH_VALUE;	   // 1s
+	T0TCR = TIMER_STOP;			   // Timer anhalten
 
 	/* Timer 0 Interrupt aktivieren */
 	VICVectAddr4 = (unsigned long)timerISR;
@@ -175,16 +154,16 @@ void initTimer(void)
 }
 
 /* Timer-Interrupt-Service-Routine */
-void timerISR(void)
+void timerISR(void)__irq
 {
 	if (running)
 	{
 		total_seconds++;
-		if (total_seconds == 3600) // 1 Stunde
+		if (total_seconds == 212400)
 		{
 			total_seconds = 0;
 			running = 0;
-			UART0_sendString("Stoppuhr erreicht 1 Stunde und wird angehalten.\n");
+			UART0_sendString("Stoppuhr erreicht 59:59:59 und wird angehalten.\n");
 		}
 	}
 	updateSegmentDisplay();
@@ -195,14 +174,14 @@ void timerISR(void)
 /* Initialisierung des externen Interrupts */
 void initExIn(void)
 {
-	PINSEL0 |= 0x80000000;						   // P0.15 als EINT2
-	EXTMODE |= 0x04;							   // EINT2 als Flanken-Interrupt
-	VICVectCntl0 = 0x30;						   // EINT2 als IRQ
+	PINSEL0 |= PINSEL0_EINT2_MASK;				   // P0.15 als EINT2
+	EXTMODE |= EXTMODE_EINT2_EDGE;				   // EINT2 als Flanken-Interrupt
+	VICVectCntl0 = VIC_VECT_CNTL0_EINT2;		   // EINT2 als IRQ，aktiv für Kanal 16 (=EINT2)
 	VICVectAddr0 = (unsigned long)toggleStopwatch; // Adresse der ISR
-	VICIntEnable = 0x10000;						   // EINT2 aktivieren
+	VICIntEnable = VIC_INT_ENABLE_EINT2;		   // EINT2 aktivieren
 }
 
-void toggleStopwatch(void)
+void toggleStopwatch(void)__irq
 {
 	if (running)
 	{
@@ -232,14 +211,14 @@ void resetStopwatch(void)
 void startStopwatch(void)
 {
 	running = 1;
-	T0TCR = 0x01; // start timer
+	T0TCR = TIMER_START;
 	UART0_sendString("Stoppuhr gestartet.\n");
 }
 
 void stopStopwatch(void)
 {
 	running = 0;
-	T0TCR = 0x00; // stop timer
+	T0TCR = TIMER_STOP;
 	UART0_sendString("Stoppuhr angehalten.\n");
 }
 
@@ -264,15 +243,15 @@ void formatTime(char *buffer, int total_seconds)
 // Siebensegmentanzeige initialisieren
 void initSeg(void)
 {
-	IODIR0 = 0x01FC0000;		// P0.18 - P0.24 als Ausgang
-	IOCLR0 = 0x01FC0000;		// Alle Ausgänge auf 0 setzen, alle Segmente aus
-	IOSET0 = bcdLookupTable[0]; // Anzeige auf 0 setzen
+	IODIR0 = SIEBEN_SEGMENT_MASKE; // P0.18 - P0.24 als Ausgang
+	IOCLR0 = SIEBEN_SEGMENT_MASKE; // Alle Ausgänge auf 0 setzen, alle Segmente aus
+	IOSET0 = bcdLookupTable[0];	   // Anzeige auf 0 setzen
 }
 
 // Siebensegmentanzeige aktualisieren
 void updateSegmentDisplay(void)
 {
-	IOCLR0 = 0x01FC0000;					  // Alle Ausgänge auf 0 setzen
+	IOCLR0 = SIEBEN_SEGMENT_MASKE;			  // Alle Ausgänge auf 0 setzen
 	IOSET0 = bcdLookupTable[current_digit];	  // Ausgabe des aktuellen Digits
 	current_digit = (current_digit + 1) % 10; // Nächstes Digit
 }
