@@ -31,6 +31,11 @@
 
 volatile int running = 0; // 1: Timer läuft, 0: Timer gestoppt
 volatile int total_seconds = 0;
+volatile int current_digit = 0;
+
+const unsigned int bcdLookupTable[10] = {
+	0x0FC0000, 0x180000, 0x16C0000, 0x13C0000, 0x1980000,
+	0x1B40000, 0x1F40000, 0x1C0000, 0x1FC0000, 0x1BC0000};
 
 void initUart0(void);
 void UART0_sendChar(char c);
@@ -45,6 +50,8 @@ void resetStopwatch(void);
 void startStopwatch(void);
 void stopStopwatch(void);
 void formatTime(char *buffer, int total_seconds);
+void initSeg(void);
+void updateSegmentDisplay(void);
 
 unsigned int readBCD(void)
 {
@@ -180,6 +187,7 @@ void timerISR(void)
 			UART0_sendString("Stoppuhr erreicht 1 Stunde und wird angehalten.\n");
 		}
 	}
+	updateSegmentDisplay();
 	T0IR = 1;		 // Interrupt-Flag löschen
 	VICVectAddr = 0; // VIC-Adressregister löschen
 }
@@ -253,6 +261,22 @@ void formatTime(char *buffer, int total_seconds)
 	buffer[9] = '\0';
 }
 
+// Siebensegmentanzeige initialisieren
+void initSeg(void)
+{
+	IODIR0 = 0x01FC0000;		// P0.18 - P0.24 als Ausgang
+	IOCLR0 = 0x01FC0000;		// Alle Ausgänge auf 0 setzen, alle Segmente aus
+	IOSET0 = bcdLookupTable[0]; // Anzeige auf 0 setzen
+}
+
+// Siebensegmentanzeige aktualisieren
+void updateSegmentDisplay(void)
+{
+	IOCLR0 = 0x01FC0000;					  // Alle Ausgänge auf 0 setzen
+	IOSET0 = bcdLookupTable[current_digit];	  // Ausgabe des aktuellen Digits
+	current_digit = (current_digit + 1) % 10; // Nächstes Digit
+}
+
 int main(void)
 {
 	char input;
@@ -260,6 +284,7 @@ int main(void)
 	initUart0();
 	initTimer();
 	initExIn();
+	initSeg();
 
 	UART0_sendString("Stopp-Uhr\n");
 	UART0_sendString("Start und Anhalten durch Drücken der Interrupt-Taste\n");
