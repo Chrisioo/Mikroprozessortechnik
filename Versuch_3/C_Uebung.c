@@ -25,12 +25,7 @@
 /********************************************************************/
 
 #include "LPC21xx.h" /* LPC21xx Definitionen */
-
-#define BAUDRATE 19200
-#define DATENBITS 8
-#define STOPBITS 2
-#define PARITY 1
-#define PERIPHERIE_CLOCK 12500000
+#include "Header.h"
 
 void initUart1(int baudRate, short datenBits, short stopBits, short parity)
 {
@@ -62,6 +57,7 @@ void initUart1(int baudRate, short datenBits, short stopBits, short parity)
 	// Beispiel: U1IER = 0x01; // RBR Interrupt freigeben
 }
 
+// Sendet ein Zeichen über UART1
 void UART1_sendChar(char c)
 {
 	/* Warten, bis Sendepuffer leer ist */
@@ -73,32 +69,35 @@ void UART1_sendChar(char c)
 	U1THR = c;
 }
 
+// Sendet einen String über UART1
 void UART1_sendString(char *s)
 {
 
-	while (*s) // while the string is not null-terminated
+	while (*s) // solange das aktuelle Zeichen nicht das Nullzeichen ist
 	{
-		UART1_sendChar(*s);
-		s++;
+		UART1_sendChar(*s);	// sende das aktuelle Zeichen
+		s++;				// gehe zum nächsten Zeichen
 	}
 }
 
+// Empfaengt ein Zeichen über UART1
 char UART1_receiveChar()
 {
 	/* Warten, bis Empfangspuffer gefüllt ist */
 	while (!(U1LSR & 0x01))
 		;
 	/* Zeichen empfangen */
-	return U1RBR;
+	return U1RBR;			// Zurueckgeben des empfangenen Zeichens
 }
 
+// Sendet einen Hex-Dump über UART1
 void UART1_sendHexDump(unsigned char *address)
 {
 	int i;
 	char hexDigits[] = "0123456789ABCDEF"; // used as a lookup table for converting a nibble to a hex digit
 
 	/* send address */
-	for (i = 28; i >= 0; i -= 4)
+	for (i = 28; i >= 0; i -= 4)	
 	{
 		UART1_sendChar(hexDigits[((unsigned int)address >> i) & 0xF]);
 	}
