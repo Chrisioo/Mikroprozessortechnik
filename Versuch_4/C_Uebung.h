@@ -40,14 +40,14 @@ volatile unsigned current_digit = 0;
 #define PARITY_ALWAYS_ONE 0x02UL            // Paritätsbit immer 1
 #define PARITY_ALWAYS_ZERO 0x03UL           // Paritätsbit immer 0
 
-void initUart0(void);
+void initUart0(unsigned int baudRate, unsigned short dataBits, unsigned short stopBits, unsigned short parity, unsigned short parityMode);
 void UART0_sendChar(char c);
 void UART0_sendString(char *s);
 char UART0_receiveChar(void);
 void initTimer(void);
-void timerISR(void);
+void timerISR(void) __irq;
 void initExIn(void);
-void toggleStopwatch(void);
+void toggleStopwatch(void) __irq;
 void displayTime(void);
 void resetStopwatch(void);
 void startStopwatch(void);

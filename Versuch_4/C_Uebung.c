@@ -68,21 +68,6 @@ int getBaudRate(int bcdSwitch)
 void initUart0(unsigned int baudRate, unsigned short dataBits, unsigned short stopBits, unsigned short parity, unsigned short parityMode)
 {
 	unsigned int divisor;
-	int bcdSwitch;
-
-	/* read the current state of the switches */
-	int S1 = (IOPIN0 & (1 << 16)) ? 1 : 0; // P0.16
-	int S2 = (IOPIN0 & (1 << 17)) ? 1 : 0; // P0.17
-	int S3 = (IOPIN1 & (1 << 25)) ? 1 : 0; // P1.25
-
-	/* set the stop bits and parity according to the switches */
-	stopBits = (S3 == 0) ? 1 : 2;	// 0: 1 stop bit, 1: 2 stop bits
-	parityMode = (S2 == 0) ? 0 : 1; // 0: odd, 1: even
-	parity = (S1 == 0) ? 0 : 1;		// 0: no parity, 1: parity
-
-	/* read the BCD switch */
-	bcdSwitch = readBCD();
-	baudRate = getBaudRate(bcdSwitch);
 
 	/* 1. Port-Pins für TxD und RxD konfigurieren */
 	PINSEL0 |= 0x05; // P0.0 = TXD0, P0.1 = RXD0, to aktivieren UART0
@@ -136,6 +121,7 @@ void UART0_sendString(char *s)
 		UART0_sendChar(*s);
 		s++;
 	}
+	UART0_sendChar('\r');
 }
 
 char UART0_receiveChar(void)
@@ -161,7 +147,7 @@ void initTimer(void)
 }
 
 /* Timer-Interrupt-Service-Routine */
-void timerISR(void)
+void timerISR(void) __irq
 {
 	if (running)
 	{
@@ -188,7 +174,7 @@ void initExIn(void)
 	VICIntEnable = VIC_INT_ENABLE_EINT2;		   // EINT2 aktivieren
 }
 
-void toggleStopwatch(void)
+void toggleStopwatch(void) __irq
 {
 	if (running)
 	{
