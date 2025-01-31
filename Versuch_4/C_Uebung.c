@@ -10,10 +10,10 @@
 /*    Entwicklungsprogramm uVision fuer ARM-Mikrocontroller         */
 /*                                                                  */
 /********************************************************************/
-/*  Aufgaben-Nr.:        *                                          */
+/*  Aufgaben-Nr.:        * 4                                        */
 /*                       *                                          */
 /********************************************************************/
-/*  Gruppen-Nr.: 	     *                                          */
+/*  Gruppen-Nr.: 	     *  Gruppe 3 Freitag 1+2 Stunde				*/
 /*                       *                                          */
 /********************************************************************/
 /*  Name / Matrikel-Nr.: *          Christian Petry / 3847497       */
@@ -65,15 +65,10 @@ int getBaudRate(int bcdSwitch)
 	}
 }
 
-void initUart0(void)
+void initUart0(unsigned int baudRate, unsigned short dataBits, unsigned short stopBits, unsigned short parity, unsigned short parityMode)
 {
 	unsigned int divisor;
-	short datenBits = DATENBITS;
-	short stopBits;
-	short parity;
-	short parityMode;
 	int bcdSwitch;
-	int baudRate;
 
 	/* read the current state of the switches */
 	int S1 = (IOPIN0 & (1 << 16)) ? 1 : 0; // P0.16
@@ -94,7 +89,7 @@ void initUart0(void)
 
 	/* 2. Anzahl Datenbits, Stop-Bits und Parität in UxLCR einstellen dabei DLAB-Bit setzen */
 	U0LCR = 0x80;						/* DLAB = 1, um auf den Divisor zuzugreifen */
-	U0LCR |= ((datenBits - 5) & 0x03) | /* 5..8 Datenbits */
+	U0LCR |= ((dataBits - 5) & 0x03) | /* 5..8 Datenbits */
 			 ((stopBits == 2) << 2) |	/* 1 oder 2 Stopbits */
 			 (parity << 3) |			/* Paritaet: 0=keine, 1=aktiviert */
 			 (parityMode << 4);			/* Paritaetsmodus: 00 = ungerade, 01 = gerade */
@@ -102,8 +97,8 @@ void initUart0(void)
 	/* 3. Frequenzteiler für Baudrate berechnen. Low-Byte in UxDLL. High-Byte UxDLM. */
 	divisor = PERIPHERIE_CLOCK / (16 * baudRate);
 
-	U0DLM = (divisor >> 8) & 0xFF;
-	U0DLL = divisor & 0xFF;
+	U0DLM = divisor / 256;
+	U0DLL = divisor % 256;
 
 	/* 4. DLAB-Bit in UxLCR löschen */
 	U0LCR &= ~0x80; // DLAB = 0
@@ -113,6 +108,18 @@ void initUart0(void)
 
 	/* 6. Wenn Interrupt ausgelöst werden soll, dann entsprechenden Interrupt in UxIER freigeben */
 	// Beispiel: U0IER = 0x01; // RBR Interrupt freigeben
+}
+
+int readSwitchS1 (void) {
+	return (IOPIN0 & (1 << 16)) ? 1 : 0; // P0.16
+}
+
+int readSwitchS2 (void) {
+	return (IOPIN0 & (1 << 17)) ? 1 : 0; // P0.17
+}
+
+int readSwitchS3 (void) {
+	return (IOPIN1 & (1 << 25)) ? 1 : 0; // P1.25
 }
 
 void UART0_sendChar(char c)
@@ -154,7 +161,7 @@ void initTimer(void)
 }
 
 /* Timer-Interrupt-Service-Routine */
-void timerISR(void)__irq
+void timerISR(void)
 {
 	if (running)
 	{
@@ -181,7 +188,7 @@ void initExIn(void)
 	VICIntEnable = VIC_INT_ENABLE_EINT2;		   // EINT2 aktivieren
 }
 
-void toggleStopwatch(void)__irq
+void toggleStopwatch(void)
 {
 	if (running)
 	{
@@ -260,7 +267,7 @@ int main(void)
 {
 	char input;
 
-	initUart0();
+	initUart0(getBaudRate(readBCD()), DATENBITS, readSwitchS3(), readSwitchS1(), readSwitchS2()); 
 	initTimer();
 	initExIn();
 	initSeg();

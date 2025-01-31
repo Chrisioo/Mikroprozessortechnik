@@ -35,16 +35,21 @@ volatile unsigned current_digit = 0;
 
 #define SIEBEN_SEGMENT_MASKE 0x01FC0000
 
+#define PARITY_ODD 0x01UL                   // Paritätsbit ungerade
+#define PARITY_EVEN 0x00UL                  // Paritätsbit gerade
+#define PARITY_ALWAYS_ONE 0x02UL            // Paritätsbit immer 1
+#define PARITY_ALWAYS_ZERO 0x03UL           // Paritätsbit immer 0
+
 void initUart0(void);
 void UART0_sendChar(char c);
 void UART0_sendString(char *s);
 char UART0_receiveChar(void);
 void initTimer(void);
-void timerISR(void)__irq;
+void timerISR(void);
 void initExIn(void);
 void toggleStopwatch(void);
 void displayTime(void);
-void resetStopwatch(void)__irq;
+void resetStopwatch(void);
 void startStopwatch(void);
 void stopStopwatch(void);
 void formatTime(char *buffer, int total_seconds);
