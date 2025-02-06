@@ -27,15 +27,18 @@
 #include "LPC21xx.h"  /* LPC21xx Definitionen */
 #include "C_Uebung.h" /* eigene Definitionen */
 
+// Lookup-Table für die 7-Segment-Anzeige
 const unsigned int bcdLookupTable[10] = {
 	SEGMENT_0, SEGMENT_1, SEGMENT_2, SEGMENT_3, SEGMENT_4,
 	SEGMENT_5, SEGMENT_6, SEGMENT_7, SEGMENT_8, SEGMENT_9};
 
+// Methode zum Auslesen des BCD-Schalters
 unsigned int readBCD(void)
 {
 	return (IOPIN0 >> 10) & 0x0F; // P0.10 - P0.13 BCDSWITCH
 }
 
+// Methode zum Bestimmen der Baudrate anhand des BCD-Schalters
 int getBaudRate(int bcdSwitch)
 {
 	switch (bcdSwitch)
@@ -65,6 +68,14 @@ int getBaudRate(int bcdSwitch)
 	}
 }
 
+/**
+ * Initialisierung der UART0
+ * @param baudRate verwendete Baudrate, Bits/Sekunde
+ * @param dataBits Anzahl der Datenbits
+ * @param stopBits Anzahl der Stopbits
+ * @param parity Paritätsbit aktivieren
+ * @param parityMode Paritätsmodus: 0 = ungerade, 1 = gerade
+ */
 void initUart0(unsigned int baudRate, unsigned short dataBits, unsigned short stopBits, unsigned short parity, unsigned short parityMode)
 {
 	unsigned int divisor;
@@ -95,42 +106,49 @@ void initUart0(unsigned int baudRate, unsigned short dataBits, unsigned short st
 	// Beispiel: U0IER = 0x01; // RBR Interrupt freigeben
 }
 
+// Methode zum Auslesen des Schalters S1
 int readSwitchS1 (void) {
 	return (IOPIN0 & (1 << 16)) ? 1 : 0; // P0.16
 }
 
+// Methode zum Auslesen des Schalters S2
 int readSwitchS2 (void) {
 	return (IOPIN0 & (1 << 17)) ? 1 : 0; // P0.17
 }
 
+// Methode zum Auslesen des Schalters S3
 int readSwitchS3 (void) {
 	return (IOPIN1 & (1 << 25)) ? 1 : 0; // P1.25
 }
 
+// Methode zum Senden eines Zeichens über UART0
 void UART0_sendChar(char c)
 {
-	while (!(U0LSR & 0x20))
+	while (!(U0LSR & 0x20))		// Warten, bis Sendepuffer leer ist
 		;
-	U0THR = c;
+	U0THR = c;					// Zeichen senden
 }
 
+// Methode zum Senden eines Strings über UART0
 void UART0_sendString(char *s)
 {
-	while (*s)
+	while (*s)					// solange das aktuelle Zeichen nicht das Nullzeichen ist
 	{
-		UART0_sendChar(*s);
-		s++;
+		UART0_sendChar(*s);		// sende das aktuelle Zeichen
+		s++;					// gehe zum nächsten Zeichen
 	}
-	UART0_sendChar('\r');
+	UART0_sendChar('\r');		// Wenn String zu Ende, dann Zeilenumbruch
 }
 
+// Methode zum Empfangen eines Zeichens über UART0
 char UART0_receiveChar(void)
 {
-	while (!(U0LSR & 0x01))
-		;
-	return U0RBR;
+	while (!(U0LSR & 0x01))		// Warten, bis Empfangspuffer gefüllt ist
+		;						
+	return U0RBR;				// Zeichen empfangen
 }
 
+// Methode zum Initialisieren des Timers
 void initTimer(void)
 {
 
@@ -149,17 +167,17 @@ void initTimer(void)
 /* Timer-Interrupt-Service-Routine */
 void timerISR(void) __irq
 {
-	if (running)
+	if (running)					// Wenn die Stoppuhr läuft
 	{
-		total_seconds++;
-		if (total_seconds == 212400)
+		total_seconds++;			// Sekunden erhöhen
+		if (total_seconds == 212400)	// Wenn 59:59:59 erreicht ist
 		{
-			total_seconds = 0;
-			running = 0;
+			total_seconds = 0;			// Stoppuhr zurücksetzen
+			running = 0;				// Stoppuhr anhalten
 			UART0_sendString("Stoppuhr erreicht 59:59:59 und wird angehalten.\n");
 		}
 	}
-	updateSegmentDisplay();
+	updateSegmentDisplay();				// 7-Segment-Anzeige aktualisieren
 	T0IR = 1;		 // Interrupt-Flag löschen
 	VICVectAddr = 0; // VIC-Adressregister löschen
 }
@@ -174,47 +192,53 @@ void initExIn(void)
 	VICIntEnable = VIC_INT_ENABLE_EINT2;		   // EINT2 aktivieren
 }
 
+// Methode zum Umschalten der Stoppuhr
 void toggleStopwatch(void) __irq
 {
-	if (running)
+	if (running)				// Wenn die Stoppuhr läuft
 	{
-		stopStopwatch();
+		stopStopwatch();		// Stoppuhr anhalten
 	}
 	else
 	{
-		startStopwatch();
+		startStopwatch();		// Ansonsten Stoppuhr starten
 	}
 	EXTINT = 0x4;	 // Interrupt-Flag löschen
 	VICVectAddr = 0; // VIC-Adressregister löschen
 }
 
+// Methode zum Anzeigen der Zeit
 void displayTime(void)
 {
-	char buffer[9];
-	formatTime(buffer, total_seconds);
-	UART0_sendString(buffer);
+	char buffer[9];				// Puffer für die Zeit initialisieren
+	formatTime(buffer, total_seconds);	// Zeit formatieren
+	UART0_sendString(buffer);			// Zeit über UART0 senden
 }
 
+// Methode zum Zurücksetzen der Stoppuhr
 void resetStopwatch(void)
 {
-	total_seconds = 0;
+	total_seconds = 0;			// Sekunden zurücksetzen
 	UART0_sendString("Stoppuhr zurückgesetzt.\n");
 }
 
+// Methode zum Starten der Stoppuhr
 void startStopwatch(void)
 {
-	running = 1;
-	T0TCR = TIMER_START;
+	running = 1;				// Stoppuhr läuft
+	T0TCR = TIMER_START;		// Timer starten
 	UART0_sendString("Stoppuhr gestartet.\n");
 }
 
+// Methode zum Anhalten der Stoppuhr
 void stopStopwatch(void)
 {
-	running = 0;
-	T0TCR = TIMER_STOP;
+	running = 0;				// Stoppuhr anhalten
+	T0TCR = TIMER_STOP;			// Timer anhalten
 	UART0_sendString("Stoppuhr angehalten.\n");
 }
 
+// Methode zum Formatieren der Zeit
 void formatTime(char *buffer, int total_seconds)
 {
 	int hours = total_seconds / 3600;
