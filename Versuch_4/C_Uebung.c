@@ -32,6 +32,10 @@ const unsigned int bcdLookupTable[10] = {
 	SEGMENT_0, SEGMENT_1, SEGMENT_2, SEGMENT_3, SEGMENT_4,
 	SEGMENT_5, SEGMENT_6, SEGMENT_7, SEGMENT_8, SEGMENT_9};
 
+const unsigned int baudrateLookupTable[10] = {
+	BAUDRATE_0, BAUDRATE_1, BAUDRATE_2, BAUDRATE_3, BAUDRATE_4,
+	BAUDRATE_5, BAUDRATE_6, BAUDRATE_7, BAUDRATE_8, BAUDRATE_9};
+
 // Methode zum Auslesen des BCD-Schalters
 unsigned int readBCD(void)
 {
@@ -41,31 +45,7 @@ unsigned int readBCD(void)
 // Methode zum Bestimmen der Baudrate anhand des BCD-Schalters
 int getBaudRate(int bcdSwitch)
 {
-	switch (bcdSwitch)
-	{
-	case 0:
-		return 110;
-	case 1:
-		return 300;
-	case 2:
-		return 600;
-	case 3:
-		return 1200;
-	case 4:
-		return 2400;
-	case 5:
-		return 4800;
-	case 6:
-		return 9600;
-	case 7:
-		return 19200;
-	case 8:
-		return 38400;
-	case 9:
-		return 57600;
-	default:
-		return 57600;
-	}
+	return baudrateLookupTable[bcdSwitch];
 }
 
 /**
@@ -170,7 +150,7 @@ void timerISR(void) __irq
 	if (running)					// Wenn die Stoppuhr läuft
 	{
 		total_seconds++;			// Sekunden erhöhen
-		if (total_seconds == 212400)	// Wenn 59:59:59 erreicht ist
+		if (total_seconds == TOTAL_SECONDS_MAX)	// Wenn 59:59:59 erreicht ist
 		{
 			total_seconds = 0;			// Stoppuhr zurücksetzen
 			running = 0;				// Stoppuhr anhalten
@@ -187,6 +167,7 @@ void initExIn(void)
 {
 	PINSEL0 |= PINSEL0_EINT2_MASK;				   // P0.15 als EINT2
 	EXTMODE |= EXTMODE_EINT2_EDGE;				   // EINT2 als Flanken-Interrupt
+	EXTPOLAR |= EXTMODE_EINT2_EDGE;
 	VICVectCntl0 = VIC_VECT_CNTL0_EINT2;		   // EINT2 als IRQ，aktiv für Kanal 16 (=EINT2)
 	VICVectAddr0 = (unsigned long)toggleStopwatch; // Adresse der ISR
 	VICIntEnable = VIC_INT_ENABLE_EINT2;		   // EINT2 aktivieren
@@ -219,7 +200,7 @@ void displayTime(void)
 void resetStopwatch(void)
 {
 	total_seconds = 0;			// Sekunden zurücksetzen
-	UART0_sendString("Stoppuhr zurückgesetzt.\n");
+	UART0_sendString("Stoppuhr zurueckgesetzt.\n");
 }
 
 // Methode zum Starten der Stoppuhr
@@ -273,6 +254,14 @@ void updateSegmentDisplay(void)
 	current_digit = (current_digit + 1) % 10; // Nächstes Digit
 }
 
+void showMenu (void) {
+	UART0_sendString("Stopp-Uhr\n");
+	UART0_sendString("Start und Anhalten durch Druecken der Interrupt-Taste\n");
+	UART0_sendString("s, S - Start und Anhalten\n");
+	UART0_sendString("a, A - Anzeige des Standes\n");
+	UART0_sendString("r, R - Ruecksetzen der Stoppuhr\n");
+}
+
 int main(void)
 {
 	char input;
@@ -281,12 +270,8 @@ int main(void)
 	initTimer();
 	initExIn();
 	initSeg();
-
-	UART0_sendString("Stopp-Uhr\n");
-	UART0_sendString("Start und Anhalten durch Drücken der Interrupt-Taste\n");
-	UART0_sendString("s, S - Start und Anhalten\n");
-	UART0_sendString("a, A - Anzeige des Standes\n");
-	UART0_sendString("r, R - Rücksetzen der Stoppuhr\n");
+	showMenu();
+	
 
 	while (1)
 	{
@@ -321,10 +306,7 @@ int main(void)
 			}
 			break;
 		default:
-			UART0_sendString("Falsche Eingabe!\n");
-			UART0_sendString("s, S - Start und Anhalten\n");
-			UART0_sendString("a, A - Anzeige des Standes\n");
-			UART0_sendString("r, R - Rücksetzen der Stoppuhr\n");
+			showMenu();
 			break;
 		}
 	}
